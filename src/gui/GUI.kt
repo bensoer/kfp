@@ -1,25 +1,45 @@
 package gui
 
 import com.sun.javafx.collections.ObservableMapWrapper
+import javafx.application.Application
 import javafx.collections.MapChangeListener
+import javafx.geometry.Pos
+import javafx.scene.Scene
+import javafx.scene.control.Button
+import javafx.scene.control.Label
+import javafx.scene.layout.VBox
+import javafx.stage.Stage
 import tools.AddressPair
 import tools.ConnStats
 import java.util.LinkedHashMap
+import java.util.LinkedHashSet
 
-class GUI(val listener:GUI.IListener)
+class GUI:Application()
 {
     /**
      * map of [AddressPair]s and their associated [ConnStats] displayed on the
      * [GUI]. just use it like a normal map, and the [GUI] will magically be
-     * updated. updating entries in this map will not trigger the [listener]'s
-     * methods to be called.
+     * updated. modifying this map will not trigger [IListener] methods to be
+     * called.
      */
     val addressPairs:MutableMap<AddressPair,ConnStats>
         get() = _addressPairs
+
     private val _addressPairs = ObservableMapWrapper(LinkedHashMap<AddressPair,ConnStats>())
+
+    /**
+     * main loop of the [GUI]. this function blocks when executed; beware!
+     */
+    val mainLoop = {Application.launch(GUI::class.java)}
+
+    /**
+     * elements in this set will be notified upon user interaction with [GUI].
+     */
+    var listeners:MutableSet<IListener> = LinkedHashSet()
 
     init
     {
+        // add listener to map to update GUI upon map's modification
         _addressPairs.addListener(MapChangeListener()
         {
             change ->
@@ -43,5 +63,48 @@ class GUI(val listener:GUI.IListener)
          * [GUI].
          */
         fun delete(addressPair:AddressPair)
+    }
+
+    /**
+     * executed from [Application.launch]. sets up and displays the application
+     * window.
+     */
+    override fun start(primaryStage:Stage)
+    {
+        // configure the stage (the window)
+        primaryStage.title = "Port Forwarder"
+
+        // configure the scene (inside the window)
+        primaryStage.scene = Scene(PrimaryScene(),640.0,480.0)
+
+        // display the window
+        primaryStage.show()
+    }
+}
+
+private const val ITEM_PADDING = 20.0
+
+private class PrimaryScene:VBox(ITEM_PADDING)
+{
+    init
+    {
+        // position children in middle of layout
+        alignment = Pos.CENTER
+
+        // label
+        val label = Label()
+        children.add(label)
+
+        // button "Click Me!"
+        val b1 = Button()
+        b1.text = "Click Me!"
+        b1.setOnAction {event -> label.text = "you clicked me!"}
+        children.add(b1)
+
+        // button "Don't Click Me!"
+        val b2 = Button()
+        b2.text = "Don't Click Me!"
+        b2.setOnAction {event -> label.text = "I told you not to click me!"}
+        children.add(b2)
     }
 }
