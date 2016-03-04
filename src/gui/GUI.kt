@@ -11,10 +11,13 @@ import javafx.scene.layout.VBox
 import javafx.stage.Stage
 import tools.AddressPair
 import tools.ConnStats
+import java.net.InetSocketAddress
 import java.util.LinkedHashMap
 import java.util.LinkedHashSet
 
-class GUI:Application()
+private var gui:GUI? = null
+
+class GUI
 {
     /**
      * map of [AddressPair]s and their associated [ConnStats] displayed on the
@@ -30,15 +33,19 @@ class GUI:Application()
     /**
      * main loop of the [GUI]. this function blocks when executed; beware!
      */
-    val mainLoop = {Application.launch(GUI::class.java)}
+    val mainLoop = {Application.launch(Window::class.java)}
 
     /**
      * elements in this set will be notified upon user interaction with [GUI].
      */
-    var listeners:MutableSet<IListener> = LinkedHashSet()
+    val listeners:MutableSet<IListener> = LinkedHashSet()
 
     init
     {
+        // set the static reference to the gui so other classes in this file may
+        // access it...
+        gui = this
+
         // add listener to map to update GUI upon map's modification
         _addressPairs.addListener(MapChangeListener()
         {
@@ -64,7 +71,10 @@ class GUI:Application()
          */
         fun delete(addressPair:AddressPair)
     }
+}
 
+class Window:Application()
+{
     /**
      * executed from [Application.launch]. sets up and displays the application
      * window.
@@ -98,13 +108,23 @@ private class PrimaryScene:VBox(ITEM_PADDING)
         // button "Click Me!"
         val b1 = Button()
         b1.text = "Click Me!"
-        b1.setOnAction {event -> label.text = "you clicked me!"}
+        b1.setOnAction()
+        {
+            event ->
+            label.text = "you clicked me!"
+            gui?.listeners?.forEach {it.insert(AddressPair(InetSocketAddress(5),InetSocketAddress(5)))}
+        }
         children.add(b1)
 
         // button "Don't Click Me!"
         val b2 = Button()
         b2.text = "Don't Click Me!"
-        b2.setOnAction {event -> label.text = "I told you not to click me!"}
+        b2.setOnAction()
+        {
+            event ->
+            label.text = "I told you not to click me!"
+            gui?.listeners?.forEach {it.delete(AddressPair(InetSocketAddress(5),InetSocketAddress(5)))}
+        }
         children.add(b2)
     }
 }
