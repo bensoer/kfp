@@ -1,9 +1,7 @@
 package lib.net
 
-import java.nio.channels.SelectableChannel
-import java.nio.channels.SelectionKey
-import java.nio.channels.Selector
-import java.nio.channels.SocketChannel
+import tools.Logger
+import java.nio.channels.*
 import java.nio.channels.spi.AbstractSelectableChannel
 
 /**
@@ -12,12 +10,14 @@ import java.nio.channels.spi.AbstractSelectableChannel
 
 class Select {
 
-    private val selector = Selector.open();
+    private val selector:Selector = Selector.open();
     private var keyRing: Set<SelectionKey>? = null;
 
     fun waitForEvent(): Int{
 
+        Logger.log("Inside for Events");
         val readySet:Int = this.selector.select();
+        Logger.log("Ello");
 
         return readySet;
 
@@ -31,7 +31,23 @@ class Select {
 
         channel.configureBlocking(false);
 
-        val interestSet:Int = (SelectionKey.OP_READ or SelectionKey.OP_ACCEPT);
+        val interestSet = SelectionKey.OP_READ;
+        //val key: SelectionKey = channel.register(this.selector, interestSet);
+        println(channel.validOps());
+        val key: SelectionKey = channel.register(this.selector, interestSet);
+
+        return key;
+
+    }
+
+    fun registerServerChannel(channel: ServerSocketChannel) : SelectionKey{
+        Logger.log("Select - Registering Server Channel With Select");
+
+        channel.configureBlocking(false);
+
+        val interestSet = SelectionKey.OP_ACCEPT;
+        //val key: SelectionKey = channel.register(this.selector, interestSet);
+        println(channel.validOps());
         val key: SelectionKey = channel.register(this.selector, interestSet);
 
         return key;

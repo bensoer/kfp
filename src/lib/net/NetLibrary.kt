@@ -43,13 +43,39 @@ class NetLibrary{
             }
         }
 
+        fun createClientSocket(address:InetSocketAddress): SocketChannel? {
+            Logger.log("NetLibrary - Attemping to connect to ${address.hostString} on port ${address.port}");
+            try{
+
+
+                val channel: SocketChannel = SocketChannel.open(address);
+
+                while(!channel.finishConnect()){
+                    //we wait boys
+                }
+
+                return channel;
+
+            }catch(uhe: UnknownHostException){
+                Logger.log("NetLibrary - Unable To resolve Host Of: ${address.hostName}");
+                uhe.printStackTrace();
+                return null;
+
+            }catch(ioe: IOException){
+                Logger.log("NetLibrary - Unable To Access IO");
+                ioe.printStackTrace();
+                return null;
+            }
+        }
+
+
         fun createServerSocket(portNumber: Int): ServerSocketChannel? {
             Logger.log("NetLibrary - Attempting to Create A Server Socket on port $portNumber");
 
             try{
 
                 //create an address of here
-                val localAddress = InetSocketAddress("localhost", portNumber);
+                val localAddress = InetSocketAddress("192.168.0.21", portNumber);
                 //create a channel
                 val channel = ServerSocketChannel.open();
 
@@ -98,7 +124,10 @@ class NetLibrary{
 
         fun transferDataFromChannels(sourceChannel: SocketChannel, destinationChannel: SocketChannel){
 
+            var buffer:ByteBuffer = ByteBuffer.allocate(1024);
+            val readOut = NetLibrary.readFromSocket(sourceChannel,buffer);
 
+            NetLibrary.writeToSocket(destinationChannel, readOut.data);
 
         }
     }

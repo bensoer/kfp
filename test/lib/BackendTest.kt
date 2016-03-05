@@ -15,7 +15,11 @@ fun main(argv:Array<String>){
     val storage = SQLitePersistanceAdaptor("portmap.db");
     val guiEventHandler = GUIEventHandler(storage);
     val addressMapper = AddressMapper(storage);
+
     val netManager = NetManager(addressMapper);
+    netManager.start();
+
+    netManager.join();
 
 }
 
