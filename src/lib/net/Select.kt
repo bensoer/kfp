@@ -1,8 +1,8 @@
 package lib.net
 
-import java.nio.channels.SelectionKey
-import java.nio.channels.Selector
-import java.nio.channels.SocketChannel
+import tools.Logger
+import java.nio.channels.*
+import java.nio.channels.spi.AbstractSelectableChannel
 
 /**
  * Created by bensoer on 02/03/16.
@@ -10,12 +10,14 @@ import java.nio.channels.SocketChannel
 
 class Select {
 
-    private val selector = Selector.open();
+    private val selector:Selector = Selector.open();
     private var keyRing: Set<SelectionKey>? = null;
 
     fun waitForEvent(): Int{
 
+        Logger.log("Inside for Events");
         val readySet:Int = this.selector.select();
+        Logger.log("Ello");
 
         return readySet;
 
@@ -25,11 +27,27 @@ class Select {
         return this.selector.selectedKeys();
     }
 
-    fun registerChannel(channel: SocketChannel) : SelectionKey{
+    fun registerChannel(channel: AbstractSelectableChannel) : SelectionKey{
 
         channel.configureBlocking(false);
 
-        val interestSet:Int = (SelectionKey.OP_READ or SelectionKey.OP_ACCEPT);
+        val interestSet = SelectionKey.OP_READ;
+        //val key: SelectionKey = channel.register(this.selector, interestSet);
+        println(channel.validOps());
+        val key: SelectionKey = channel.register(this.selector, interestSet);
+
+        return key;
+
+    }
+
+    fun registerServerChannel(channel: ServerSocketChannel) : SelectionKey{
+        Logger.log("Select - Registering Server Channel With Select");
+
+        channel.configureBlocking(false);
+
+        val interestSet = SelectionKey.OP_ACCEPT;
+        //val key: SelectionKey = channel.register(this.selector, interestSet);
+        println(channel.validOps());
         val key: SelectionKey = channel.register(this.selector, interestSet);
 
         return key;
@@ -44,8 +62,8 @@ class Select {
         return key.isReadable();
     }
 
-    fun getChannelForKey(key: SelectionKey): SocketChannel {
-        return key.channel() as SocketChannel;
+    fun getChannelForKey(key: SelectionKey): SelectableChannel {
+        return key.channel();
     }
 
 
