@@ -18,6 +18,16 @@ import java.nio.charset.Charset
 class NetLibrary{
 
     companion object{
+        /**
+         * lowest port number on a typical machine.
+         */
+        val MIN_PORT:Int = 0x0000
+
+        /**
+         * highest port number on a typical machine.
+         */
+        val MAX_PORT:Int = 0xFFFF
+
         fun createClientSocket(hostName:String, portNumber:Int): SocketChannel? {
             Logger.log("NetLibrary - Attemping to connect to $hostName on port $portNumber");
             try{
