@@ -11,17 +11,15 @@ import kotlin.concurrent.thread
  */
 fun main(args: Array<String>)
 {
-    // instantiate the GUI
-    val gui = GUI()
+    // runs the GUI's main loop on this thread. this causes the window to be
+    // created and displayed and stuff
+    thread {GUI.mainLoop()}
+    GUI.awaitInitialized()
 
     // adds a listener to GUI so we will be notified when user interacts with it
     gui.listeners.add(listener)
 
-    // runs the GUI's main loop on this thread. this causes the window to be
-    // created and displayed and stuff
-    thread {gui.mainLoop()}
-
-    gui.awaitInitialized()
+    // add address pairs to GUI
     gui.addressPairs.put(AddressPair(80,InetSocketAddress("steve",800)),ConnStats(0))
 }
 

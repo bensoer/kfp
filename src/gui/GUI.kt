@@ -12,14 +12,39 @@ import java.util.LinkedHashMap
 import java.util.LinkedHashSet
 import java.util.concurrent.CountDownLatch
 
-private var gui:GUI? = null
-private var guiAddressPairs:MutableMap<AddressPair,ConnStats>? = null
-private var window:Window? = null
-private val releasedOnSetupFinished = CountDownLatch(1)
+private var _gui:GUI? = null
+    set(value) = synchronized(GUI.Companion)
+    {
+        if (field != null) throw IllegalStateException("GUI should only be constructed once!")
+        field = value
+    }
 
-class GUI
+val gui:GUI get() = _gui ?: throw IllegalStateException("must execute GUI.mainLoop before accessing the gui")
+
+class GUI:Application()
 {
-    private val _addressPairs = Collections.synchronizedMap(LinkedHashMap<AddressPair,ConnStats>())
+    companion object
+    {
+
+        /**
+         * main loop of the [GUI]. this function blocks when executed; beware!
+         */
+        val mainLoop = {Application.launch(GUI::class.java)}
+
+        private val releasedOnApplicationStarted = CountDownLatch(1)
+
+        fun awaitInitialized()
+        {
+            releasedOnApplicationStarted.await()
+        }
+    }
+
+    init
+    {
+        _gui = this
+    }
+
+    private val _addressPairs:MutableMap<AddressPair,ConnStats> = Collections.synchronizedMap(LinkedHashMap<AddressPair,ConnStats>())
 
     /**
      * map of [AddressPair]s and their associated [ConnStats] displayed on the
@@ -35,66 +60,17 @@ class GUI
             change ->
             if (change.wasAdded())
             {
-                window!!.forwardingPane.addressPairs.add(change.key)
+                forwardingPane.addressPairs.add(change.key)
             }
             else
             {
-                window!!.forwardingPane.addressPairs.remove(change.key)
+                forwardingPane.addressPairs.remove(change.key)
             }
         })
         return@run map
     }
 
-    /**
-     * main loop of the [GUI]. this function blocks when executed; beware!
-     */
-    val mainLoop = {Application.launch(Window::class.java)}
-
-    /**
-     * elements in this set will be notified upon user interaction with [GUI].
-     */
-    val listeners:MutableSet<IListener> = LinkedHashSet()
-
-    init
-    {
-        // set the static reference to the gui so other classes in this file may
-        // access it...
-        gui = this
-        guiAddressPairs = _addressPairs
-    }
-
-    fun awaitInitialized()
-    {
-        releasedOnSetupFinished.await()
-    }
-
-    /**
-     * interface that [GUI] observers must implement to be notified by the [GUI]
-     * upon user interaction.
-     */
-    interface IListener
-    {
-        /**
-         * called when the user adds a new [AddressPair] to the [GUI].
-         */
-        fun insert(addressPair:AddressPair)
-
-        /**
-         * called when the user removes an existing [AddressPair] from the
-         * [GUI].
-         */
-        fun delete(addressPair:AddressPair)
-    }
-}
-
-class Window:Application()
-{
     val forwardingPane:ForwardingPane by lazy {ForwardingPane()}
-
-    init
-    {
-        window = this
-    }
 
     /**
      * executed from [Application.launch]. sets up and displays the application
@@ -117,17 +93,40 @@ class Window:Application()
         {
             override fun added(addressPair:AddressPair)
             {
-                guiAddressPairs!!.put(addressPair,ConnStats(0))
-                gui!!.listeners.forEach {it.insert(addressPair)}
+                _addressPairs.put(addressPair,ConnStats(0))
+                listeners.forEach {it.insert(addressPair)}
             }
 
             override fun removed(addressPair:AddressPair)
             {
-                guiAddressPairs!!.remove(addressPair)
-                gui!!.listeners.forEach {it.delete(addressPair)}
+                _addressPairs.remove(addressPair)
+                listeners.forEach {it.delete(addressPair)}
             }
         }
 
-        releasedOnSetupFinished.countDown()
+        releasedOnApplicationStarted.countDown()
+    }
+
+    /**
+     * elements in this set will be notified upon user interaction with [GUI].
+     */
+    val listeners:MutableSet<IListener> = LinkedHashSet()
+
+    /**
+     * interface that [GUI] observers must implement to be notified by the [GUI]
+     * upon user interaction.
+     */
+    interface IListener
+    {
+        /**
+         * called when the user adds a new [AddressPair] to the [GUI].
+         */
+        fun insert(addressPair:AddressPair)
+
+        /**
+         * called when the user removes an existing [AddressPair] from the
+         * [GUI].
+         */
+        fun delete(addressPair:AddressPair)
     }
 }
