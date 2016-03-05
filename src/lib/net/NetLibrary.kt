@@ -43,7 +43,7 @@ class NetLibrary{
             }
         }
 
-        fun createServerSocket(portNumber: Int): SocketChannel? {
+        fun createServerSocket(portNumber: Int): ServerSocketChannel? {
             Logger.log("NetLibrary - Attempting to Create A Server Socket on port $portNumber");
 
             try{
@@ -51,7 +51,7 @@ class NetLibrary{
                 //create an address of here
                 val localAddress = InetSocketAddress("localhost", portNumber);
                 //create a channel
-                val channel = SocketChannel.open();
+                val channel = ServerSocketChannel.open();
 
                 //enable reuse of address
                 val socketOption = StandardSocketOptions.SO_REUSEADDR;
@@ -70,7 +70,6 @@ class NetLibrary{
             }
         }
 
-        data class SocketRead(val data:ByteBuffer, val bytesRead:Int);
         fun readFromSocket(channel: SocketChannel, buffer: ByteBuffer): SocketRead{
 
             //read in all to fill up the buffer ?

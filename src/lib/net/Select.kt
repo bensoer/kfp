@@ -1,8 +1,10 @@
 package lib.net
 
+import java.nio.channels.SelectableChannel
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
 import java.nio.channels.SocketChannel
+import java.nio.channels.spi.AbstractSelectableChannel
 
 /**
  * Created by bensoer on 02/03/16.
@@ -25,7 +27,7 @@ class Select {
         return this.selector.selectedKeys();
     }
 
-    fun registerChannel(channel: SocketChannel) : SelectionKey{
+    fun registerChannel(channel: AbstractSelectableChannel) : SelectionKey{
 
         channel.configureBlocking(false);
 
@@ -44,8 +46,8 @@ class Select {
         return key.isReadable();
     }
 
-    fun getChannelForKey(key: SelectionKey): SocketChannel {
-        return key.channel() as SocketChannel;
+    fun getChannelForKey(key: SelectionKey): SelectableChannel {
+        return key.channel();
     }
 
 
