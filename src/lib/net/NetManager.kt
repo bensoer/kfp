@@ -67,7 +67,7 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                     //accept the connection
                     Logger.log("Now Accepting Connection");
                     //serverSocketChannel.configureBlocking(true);
-                    val serverSocketSession = serverSocketChannel.socket().accept();
+                    val serverSocketSession = serverSocketChannel.accept();
                     Logger.log("Connection Accepted");
                     serverSocketChannel.configureBlocking(false);
 
