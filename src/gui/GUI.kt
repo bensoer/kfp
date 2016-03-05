@@ -3,32 +3,47 @@ package gui
 import com.sun.javafx.collections.ObservableMapWrapper
 import javafx.application.Application
 import javafx.collections.MapChangeListener
-import javafx.geometry.Pos
 import javafx.scene.Scene
-import javafx.scene.control.Button
-import javafx.scene.control.Label
-import javafx.scene.layout.VBox
 import javafx.stage.Stage
 import tools.AddressPair
 import tools.ConnStats
-import java.net.InetSocketAddress
+import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.LinkedHashSet
+import java.util.concurrent.CountDownLatch
 
 private var gui:GUI? = null
+private var guiAddressPairs:MutableMap<AddressPair,ConnStats>? = null
+private var window:Window? = null
+private val releasedOnSetupFinished = CountDownLatch(1)
 
 class GUI
 {
+    private val _addressPairs = Collections.synchronizedMap(LinkedHashMap<AddressPair,ConnStats>())
+
     /**
      * map of [AddressPair]s and their associated [ConnStats] displayed on the
      * [GUI]. just use it like a normal map, and the [GUI] will magically be
      * updated. modifying this map will not trigger [IListener] methods to be
      * called.
      */
-    val addressPairs:MutableMap<AddressPair,ConnStats>
-        get() = _addressPairs
-
-    private val _addressPairs = ObservableMapWrapper(LinkedHashMap<AddressPair,ConnStats>())
+    val addressPairs:MutableMap<AddressPair,ConnStats> = run()
+    {
+        val map = ObservableMapWrapper(_addressPairs)
+        map.addListener(MapChangeListener()
+        {
+            change ->
+            if (change.wasAdded())
+            {
+                window!!.forwardingPane.addressPairs.add(change.key)
+            }
+            else
+            {
+                window!!.forwardingPane.addressPairs.remove(change.key)
+            }
+        })
+        return@run map
+    }
 
     /**
      * main loop of the [GUI]. this function blocks when executed; beware!
@@ -45,13 +60,12 @@ class GUI
         // set the static reference to the gui so other classes in this file may
         // access it...
         gui = this
+        guiAddressPairs = _addressPairs
+    }
 
-        // add listener to map to update GUI upon map's modification
-        _addressPairs.addListener(MapChangeListener()
-        {
-            change ->
-            // update the GUI
-        })
+    fun awaitInitialized()
+    {
+        releasedOnSetupFinished.await()
     }
 
     /**
@@ -75,6 +89,13 @@ class GUI
 
 class Window:Application()
 {
+    val forwardingPane:ForwardingPane by lazy {ForwardingPane()}
+
+    init
+    {
+        window = this
+    }
+
     /**
      * executed from [Application.launch]. sets up and displays the application
      * window.
@@ -85,46 +106,28 @@ class Window:Application()
         primaryStage.title = "Port Forwarder"
 
         // configure the scene (inside the window)
-        primaryStage.scene = Scene(PrimaryScene(),640.0,480.0)
+        primaryStage.scene = Scene(forwardingPane,640.0,480.0)
+        primaryStage.scene.stylesheets.add(CSS.FILE_PATH)
 
         // display the window
         primaryStage.show()
-    }
-}
 
-private const val ITEM_PADDING = 20.0
-
-private class PrimaryScene:VBox(ITEM_PADDING)
-{
-    init
-    {
-        // position children in middle of layout
-        alignment = Pos.CENTER
-
-        // label
-        val label = Label()
-        children.add(label)
-
-        // button "Click Me!"
-        val b1 = Button()
-        b1.text = "Click Me!"
-        b1.setOnAction()
+        // hook stuff up to each other
+        forwardingPane.listener = object:ForwardingPane.Listener
         {
-            event ->
-            label.text = "you clicked me!"
-            gui?.listeners?.forEach {it.insert(AddressPair(InetSocketAddress(5),InetSocketAddress(5)))}
-        }
-        children.add(b1)
+            override fun added(addressPair:AddressPair)
+            {
+                guiAddressPairs!!.put(addressPair,ConnStats(0))
+                gui!!.listeners.forEach {it.insert(addressPair)}
+            }
 
-        // button "Don't Click Me!"
-        val b2 = Button()
-        b2.text = "Don't Click Me!"
-        b2.setOnAction()
-        {
-            event ->
-            label.text = "I told you not to click me!"
-            gui?.listeners?.forEach {it.delete(AddressPair(InetSocketAddress(5),InetSocketAddress(5)))}
+            override fun removed(addressPair:AddressPair)
+            {
+                guiAddressPairs!!.remove(addressPair)
+                gui!!.listeners.forEach {it.delete(addressPair)}
+            }
         }
-        children.add(b2)
+
+        releasedOnSetupFinished.countDown()
     }
 }
