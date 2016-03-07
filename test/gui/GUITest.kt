@@ -21,6 +21,10 @@ fun main(args: Array<String>)
 
     // add address pairs to GUI
     gui.addressPairs.put(AddressPair(80,InetSocketAddress("steve",800)),ConnStats(0))
+
+    // remove all address pair after a bit...
+    Thread.sleep(1000)
+    gui.addressPairs.clear()
 }
 
 /**
