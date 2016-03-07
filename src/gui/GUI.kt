@@ -4,9 +4,12 @@ import com.sun.javafx.collections.ObservableMapWrapper
 import javafx.application.Application
 import javafx.collections.MapChangeListener
 import javafx.scene.Scene
+import javafx.scene.control.ScrollPane
+import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
 import tools.AddressPair
 import tools.ConnStats
+import java.net.InetSocketAddress
 import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.LinkedHashSet
@@ -52,25 +55,12 @@ class GUI:Application()
      * updated. modifying this map will not trigger [IListener] methods to be
      * called.
      */
-    val addressPairs:MutableMap<AddressPair,ConnStats> = run()
-    {
-        val map = ObservableMapWrapper(_addressPairs)
-        map.addListener(MapChangeListener()
-        {
-            change ->
-            if (change.wasAdded())
-            {
-                forwardingPane.addressPairs.add(change.key)
-            }
-            else
-            {
-                forwardingPane.addressPairs.remove(change.key)
-            }
-        })
-        return@run map
-    }
+    // todo: hook up with backend
+    val addressPairs = ObservableMapWrapper(_addressPairs)
 
-    val forwardingPane:ForwardingPane by lazy {ForwardingPane()}
+    private val forwardingPane:ForwardingPane by lazy {ForwardingPane()}
+
+    private val statisticsPane:StatisticsPane by lazy {StatisticsPane()}
 
     /**
      * executed from [Application.launch]. sets up and displays the application
@@ -82,30 +72,45 @@ class GUI:Application()
         primaryStage.title = "Port Forwarder"
 
         // configure the scene (inside the window)
-        primaryStage.scene = Scene(forwardingPane,640.0,480.0)
+        val borderPane = BorderPane()
+        primaryStage.scene = Scene(borderPane,900.0,480.0)
         primaryStage.scene.stylesheets.add(CSS.FILE_PATH)
+
+        borderPane.center = ScrollPane(forwardingPane)
+        borderPane.bottom = statisticsPane
 
         // display the window
         primaryStage.show()
 
-        // hook stuff up to each other
-        forwardingPane.listener = object:ForwardingPane.Listener
+        // hook stuff up to each other: forwarding pane
+        forwardingPane.listener = forwardingPaneListener
+
+        // hook stuff up to each other: user
+        addressPairs.addListener(MapChangeListener()
         {
-            override fun added(addressPair:AddressPair)
+            change ->
+            if (change.wasAdded())
             {
-                _addressPairs.put(addressPair,ConnStats(0))
-                listeners.forEach {it.insert(addressPair)}
+                forwardingPane.addressPairs.add(change.key)
             }
-
-            override fun removed(addressPair:AddressPair)
+            else
             {
-                _addressPairs.remove(addressPair)
-                listeners.forEach {it.delete(addressPair)}
+                forwardingPane.addressPairs.remove(change.key)
             }
-        }
+        })
 
+        // release count down latch...
         releasedOnApplicationStarted.countDown()
     }
+
+    // todo: hook up with backend
+    fun bytesForwarded(connection:InetSocketAddress,port:Int,numBytes:Int) = statisticsPane.bytesForwarded(connection,port,numBytes)
+
+    // todo: hook up with backend
+    fun connectionOpened() = statisticsPane.connectionOpened()
+
+    // todo: hook up with backend
+    fun connectionClosed() = statisticsPane.connectionClosed()
 
     /**
      * elements in this set will be notified upon user interaction with [GUI].
@@ -128,5 +133,20 @@ class GUI:Application()
          * [GUI].
          */
         fun delete(addressPair:AddressPair)
+    }
+
+    private val forwardingPaneListener = object:ForwardingPane.Listener
+    {
+        override fun added(addressPair:AddressPair)
+        {
+            _addressPairs.put(addressPair,ConnStats(0))
+            listeners.forEach {it.insert(addressPair)}
+        }
+
+        override fun removed(addressPair:AddressPair)
+        {
+            _addressPairs.remove(addressPair)
+            listeners.forEach {it.delete(addressPair)}
+        }
     }
 }
