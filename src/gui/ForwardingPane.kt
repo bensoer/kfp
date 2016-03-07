@@ -26,8 +26,6 @@ class ForwardingPane:GridPane()
     private val COLON_LABEL_TEXT:String = ":";
     private val SEPARATOR_TEXT:String = "->"
 
-    private var nextRow:Int = 0
-
     private val _addressPairs = LinkedHashSet<AddressPair>()
     private val forwardingEntries:MutableList<ForwardingEntry> = LinkedList()
     private val forwardingEntryObserver = ForwardingEntryObserver()
@@ -41,19 +39,20 @@ class ForwardingPane:GridPane()
         set.addListener(SetChangeListener()
         {
             change ->
-            if (change.wasAdded())
+            Platform.runLater()
             {
-                val lastForwardingEntry = forwardingEntries.last()
-                lastForwardingEntry.dstAddrTextField.text = change.elementAdded.dest.hostName
-                lastForwardingEntry.dstPortTextField.text = change.elementAdded.dest.port.toString()
-                lastForwardingEntry.localPortTextField.text = change.elementAdded.localPort.toString()
-            }
-            else
-            {
-                forwardingEntries.removeAll()
+                if (change.wasAdded())
                 {
-                    it.localPort == change.elementRemoved.localPort.toShort() &&
-                    it.dstSockAddr == change.elementRemoved.dest
+                    val lastForwardingEntry = forwardingEntries.last()
+                    lastForwardingEntry.dstAddrTextField.text = change.elementAdded.dest.hostName
+                    lastForwardingEntry.dstPortTextField.text = change.elementAdded.dest.port.toString()
+                    lastForwardingEntry.localPortTextField.text = change.elementAdded.localPort.toString()
+                }
+                else
+                {
+                    val forwardingEntry = forwardingEntries
+                        .find {it.localPort == change.elementRemoved.localPort && it.dstSockAddr == change.elementRemoved.dest}
+                    if (forwardingEntry != null) remove(forwardingEntry)
                 }
             }
         })
@@ -88,29 +87,27 @@ class ForwardingPane:GridPane()
     private fun add(forwardingEntry:ForwardingEntry) = synchronized(this)
     {
         // add nodes to layout
-        add(forwardingEntry.localPortTextField,COL_INDEX_LOCAL_PORT,nextRow)
-        add(Label(SEPARATOR_TEXT),COL_INDEX_SEPARATOR,nextRow)
-        add(forwardingEntry.dstAddrTextField,COL_INDEX_DST_ADDR,nextRow)
-        add(Label(COLON_LABEL_TEXT),COL_INDEX_COLON,nextRow)
-        add(forwardingEntry.dstPortTextField,COL_INDEX_DST_PORT,nextRow)
+        add(forwardingEntry.localPortTextField,COL_INDEX_LOCAL_PORT,forwardingEntries.size)
+        add(Label(SEPARATOR_TEXT),COL_INDEX_SEPARATOR,forwardingEntries.size)
+        add(forwardingEntry.dstAddrTextField,COL_INDEX_DST_ADDR,forwardingEntries.size)
+        add(Label(COLON_LABEL_TEXT),COL_INDEX_COLON,forwardingEntries.size)
+        add(forwardingEntry.dstPortTextField,COL_INDEX_DST_PORT,forwardingEntries.size)
 
         // book keeping
         forwardingEntry.stateObserver = forwardingEntryObserver
         forwardingEntries.add(forwardingEntry)
-        nextRow++
     }
 
     private fun remove(forwardingEntry:ForwardingEntry) = synchronized(this)
     {
-        // remove nodes from layout
-        val from = children.indexOf(forwardingEntry.localPortTextField)
-        val to = children.indexOf(forwardingEntry.dstPortTextField)+1
-        children.remove(from,to)
-
         // book keeping
         forwardingEntry.stateObserver = null
-        forwardingEntries.remove(forwardingEntry)
-        nextRow--
+        val toRetain = forwardingEntries.minus(forwardingEntry)
+
+        // replace all existing forwarding entries
+        children.clear()
+        forwardingEntries.clear()
+        toRetain.forEach {add(it)}
     }
 
     interface Listener
@@ -144,7 +141,7 @@ class ForwardingPane:GridPane()
 
                 // go through all forwarding entries, and set the error flags
                 // for entries that have duplicate localPorts
-                val usedLocalPorts = LinkedHashSet<Short>()
+                val usedLocalPorts = LinkedHashSet<Int>()
                 forwardingEntries.forEach()
                 {
                     val localPort = it.localPort
@@ -195,7 +192,7 @@ private class ForwardingEntry()
         private const val VALIDATION_DELAY_MILLIS = 200L
     }
 
-    var localPort:Short? = null
+    var localPort:Int? = null
 
     var dstSockAddr:InetSocketAddress? = null
 
@@ -298,7 +295,7 @@ private class ForwardingEntry()
             }
 
             // try to resolve addresses
-            localPort = try {localPortTextField.text.toShort()} catch(ex:Exception) {null}
+            localPort = try {localPortTextField.text.toInt()} catch(ex:Exception) {null}
             dstSockAddr = validateAddress(dstAddrTextField.text,dstPortTextField.text)
 
             // update the error feedback on the GUI
