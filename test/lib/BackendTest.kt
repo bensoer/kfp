@@ -3,6 +3,7 @@ package lib
 import gui.GUI
 import lib.db.IPersistanceAdaptor
 import lib.db.SQLitePersistanceAdaptor
+import lib.net.AddressMapper
 import lib.net.NetManager
 import tools.AddressPair
 

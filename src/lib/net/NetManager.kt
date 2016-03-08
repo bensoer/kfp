@@ -2,7 +2,7 @@ package lib.net
 
 import gui.GUI
 import javafx.collections.ObservableMap
-import lib.AddressMapper
+import lib.net.AddressMapper
 import tools.AddressPair
 import tools.Logger
 import java.net.Socket
