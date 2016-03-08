@@ -85,7 +85,7 @@ class NetLibrary{
             try{
 
                 //create an address of here
-                val localAddress = InetSocketAddress("192.168.0.21", portNumber);
+                val localAddress = InetSocketAddress("localhost", portNumber);
                 //create a channel
                 val channel = ServerSocketChannel.open();
 
@@ -126,18 +126,25 @@ class NetLibrary{
 
         fun writeToSocket(channel: SocketChannel, buffer: ByteBuffer){
 
-            buffer.flip();
+            //buffer.flip();
             while(buffer.hasRemaining()){
                 channel.write(buffer);
             }
         }
 
-        fun transferDataFromChannels(sourceChannel: SocketChannel, destinationChannel: SocketChannel){
+        fun transferDataFromChannels(sourceChannel: SocketChannel, destinationChannel: SocketChannel):Int{
+            Logger.log("NetLibrary - Transfering Data From Channels")
 
             var buffer:ByteBuffer = ByteBuffer.allocate(1024);
             val readOut = NetLibrary.readFromSocket(sourceChannel,buffer);
 
+            Logger.log("NetLibrary - Read In From Source Stream. Go This Data");
+            println(readOut);
+
+            //Logger.log("NetLibrary - Now Sending it To ${remoteAddress!!.}")
             NetLibrary.writeToSocket(destinationChannel, readOut.data);
+
+            return readOut.bytesRead;
 
         }
     }
