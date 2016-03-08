@@ -1,15 +1,16 @@
 package gui
 
 import javafx.application.Application
+import javafx.application.Platform
 import javafx.collections.ObservableSet
 import javafx.collections.SetChangeListener
 import javafx.scene.Scene
+import javafx.scene.control.Alert
 import javafx.scene.control.ScrollPane
 import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
 import tools.AddressPair
 import java.net.InetSocketAddress
-import java.util.LinkedHashSet
 import java.util.concurrent.CountDownLatch
 
 private var _gui:GUI? = null
@@ -150,13 +151,41 @@ class GUI:Application()
         override fun added(addressPair:AddressPair)
         {
             // todo: check the retturn result
-            listeners?.insert(addressPair)
+            if (listeners?.insert(addressPair) == false)
+            {
+                val alert = Alert(Alert.AlertType.ERROR)
+                alert.title = "Port Forwarder"
+                alert.headerText = "Persistence Failure"
+                alert.contentText =
+"""OHHHH MY GAAWWWD!!! Failed to insert entry: "${addressPair.localPort} -> ${addressPair.dest}" into persistent storage; it will be removed from the address pair list.
+
+You can try:
+    • reentering the data
+    • replacing your hard drive"""
+                alert.showAndWait()
+
+                addressPairs.remove(addressPair)
+            }
         }
 
         override fun removed(addressPair:AddressPair)
         {
-            // todo: check the retturn result
-            listeners?.delete(addressPair)
+            // todo: check the return result
+            if (listeners?.delete(addressPair) == false)
+            {
+                val alert = Alert(Alert.AlertType.ERROR)
+                alert.title = "Port Forwarder"
+                alert.headerText = "Persistence Failure"
+                alert.contentText =
+"""OH NOOOOO! Failed to remove entry: "${addressPair.localPort} -> ${addressPair.dest}" from persistent storage; it will be re-inserted into the address pair list.
+
+You can try:
+    • removing the entry again
+    • giving up"""
+                alert.showAndWait()
+
+                addressPairs.add(addressPair)
+            }
         }
     }
 }
