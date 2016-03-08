@@ -32,7 +32,11 @@ class GUI:Application()
         /**
          * main loop of the [GUI]. this function blocks when executed; beware!
          */
-        val mainLoop = {Application.launch(GUI::class.java)}
+        val mainLoop =
+            {
+                Application.launch(GUI::class.java)
+                gui.listeners.forEach {it.exit()}
+            }
 
         private val releasedOnApplicationStarted = CountDownLatch(1)
 
@@ -133,6 +137,11 @@ class GUI:Application()
          * [GUI].
          */
         fun delete(addressPair:AddressPair)
+
+        /**
+         * called when the [GUI]'s main thread is terminated.
+         */
+        fun exit()
     }
 
     private val forwardingPaneListener = object:ForwardingPane.Listener

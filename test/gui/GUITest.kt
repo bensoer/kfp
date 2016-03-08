@@ -41,4 +41,9 @@ private val listener = object:GUI.IListener
     {
         println("delete($addressPair)")
     }
+
+    override fun exit()
+    {
+        println("exit()")
+    }
 }
