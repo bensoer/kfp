@@ -26,39 +26,13 @@ class ForwardingPane:GridPane()
     private val COLON_LABEL_TEXT:String = ":";
     private val SEPARATOR_TEXT:String = "->"
 
-    private val _addressPairs = LinkedHashSet<AddressPair>()
     private val forwardingEntries:MutableList<ForwardingEntry> = LinkedList()
     private val forwardingEntryObserver = ForwardingEntryObserver()
 
     var listener:Listener? = null
 
-    val addressPairs:MutableSet<AddressPair> = run()
-    {
-        val set = ObservableSetWrapper(_addressPairs)
-
-        set.addListener(SetChangeListener()
-        {
-            change ->
-            Platform.runLater()
-            {
-                if (change.wasAdded())
-                {
-                    val lastForwardingEntry = forwardingEntries.last()
-                    lastForwardingEntry.dstAddrTextField.text = change.elementAdded.dest.hostName
-                    lastForwardingEntry.dstPortTextField.text = change.elementAdded.dest.port.toString()
-                    lastForwardingEntry.localPortTextField.text = change.elementAdded.localPort.toString()
-                }
-                else
-                {
-                    val forwardingEntry = forwardingEntries
-                        .find {it.localPort == change.elementRemoved.localPort && it.dstSockAddr == change.elementRemoved.dest}
-                    if (forwardingEntry != null) remove(forwardingEntry)
-                }
-            }
-        })
-
-        return@run set
-    }
+    private val _addressPairs = LinkedHashSet<AddressPair>()
+    val addressPairs = ObservableSetWrapper(_addressPairs)
 
     init
     {
@@ -82,6 +56,9 @@ class ForwardingPane:GridPane()
 
         // add gui controls
         add(ForwardingEntry())
+
+        // begin observing for events
+        addressPairs.addListener(AddressPairObserver())
     }
 
     private fun add(forwardingEntry:ForwardingEntry) = synchronized(this)
@@ -114,6 +91,30 @@ class ForwardingPane:GridPane()
     {
         fun added(addressPair:AddressPair)
         fun removed(addressPair:AddressPair)
+    }
+
+    private inner class AddressPairObserver:SetChangeListener<AddressPair>
+    {
+        override fun onChanged(change:SetChangeListener.Change<out AddressPair>)
+        {
+            Platform.runLater()
+            {
+                if (change.wasAdded())
+                {
+                    val lastForwardingEntry = forwardingEntries.last()
+                    lastForwardingEntry.dstAddrTextField.text = change.elementAdded.dest.hostName
+                    lastForwardingEntry.dstPortTextField.text = change.elementAdded.dest.port.toString()
+                    lastForwardingEntry.localPortTextField.text = change.elementAdded.localPort.toString()
+                    add(ForwardingEntry())
+                }
+                else
+                {
+                    val forwardingEntry = forwardingEntries
+                        .find {it.localPort == change.elementRemoved.localPort && it.dstSockAddr == change.elementRemoved.dest}
+                    if (forwardingEntry != null) remove(forwardingEntry)
+                }
+            }
+        }
     }
 
     private inner class ForwardingEntryObserver:ForwardingEntry.Observer
@@ -218,6 +219,7 @@ private class ForwardingEntry()
 
         set(value)
         {
+            assert(Platform.isFxApplicationThread())
             if (value.localPort != field.localPort)
             {
                 if (value.localPort)

@@ -1,17 +1,14 @@
 package gui
 
-import com.sun.javafx.collections.ObservableMapWrapper
 import javafx.application.Application
-import javafx.collections.MapChangeListener
+import javafx.collections.ObservableSet
+import javafx.collections.SetChangeListener
 import javafx.scene.Scene
 import javafx.scene.control.ScrollPane
 import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
 import tools.AddressPair
-import tools.ConnStats
 import java.net.InetSocketAddress
-import java.util.Collections
-import java.util.LinkedHashMap
 import java.util.LinkedHashSet
 import java.util.concurrent.CountDownLatch
 
@@ -51,8 +48,6 @@ class GUI:Application()
         _gui = this
     }
 
-    private val _addressPairs:MutableMap<AddressPair,ConnStats> = Collections.synchronizedMap(LinkedHashMap<AddressPair,ConnStats>())
-
     /**
      * map of [AddressPair]s and their associated [ConnStats] displayed on the
      * [GUI]. just use it like a normal map, and the [GUI] will magically be
@@ -60,7 +55,7 @@ class GUI:Application()
      * called.
      */
     // todo: hook up with backend
-    val addressPairs = ObservableMapWrapper(_addressPairs)
+    val addressPairs:ObservableSet<AddressPair> get() = forwardingPane.addressPairs
 
     private val forwardingPane:ForwardingPane by lazy {ForwardingPane()}
 
@@ -90,16 +85,16 @@ class GUI:Application()
         forwardingPane.listener = forwardingPaneListener
 
         // hook stuff up to each other: user
-        addressPairs.addListener(MapChangeListener()
+        addressPairs.addListener(SetChangeListener()
         {
             change ->
             if (change.wasAdded())
             {
-                forwardingPane.addressPairs.add(change.key)
+                forwardingPane.addressPairs.add(change.elementAdded)
             }
             else
             {
-                forwardingPane.addressPairs.remove(change.key)
+                forwardingPane.addressPairs.remove(change.elementRemoved)
             }
         })
 
@@ -148,13 +143,11 @@ class GUI:Application()
     {
         override fun added(addressPair:AddressPair)
         {
-            _addressPairs.put(addressPair,ConnStats(0))
             listeners.forEach {it.insert(addressPair)}
         }
 
         override fun removed(addressPair:AddressPair)
         {
-            _addressPairs.remove(addressPair)
             listeners.forEach {it.delete(addressPair)}
         }
     }
