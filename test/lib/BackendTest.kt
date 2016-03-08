@@ -13,26 +13,32 @@ import tools.AddressPair
 fun main(argv:Array<String>){
 
     val storage = SQLitePersistanceAdaptor("portmap.db");
-    val guiEventHandler = GUIEventHandler(storage);
     val addressMapper = AddressMapper(storage);
-
     val netManager = NetManager(addressMapper);
+
+    val guiEventHandler = GUIEventHandler(netManager);
+
     netManager.start();
 
     netManager.join();
 
 }
 
-private class GUIEventHandler(val dataStorage:IPersistanceAdaptor): GUI.IListener{
+private class GUIEventHandler(val netManager:NetManager): GUI.IListener{
 
     override fun insert(addressPair: AddressPair)
     {
-        this.dataStorage.saveAddress(addressPair);
+        //this.dataStorage.saveAddress(addressPair);
+        //TODO: Return the status of whether it was succesful
+        this.netManager.addMapping(addressPair);
+
     }
 
     override fun delete(addressPair: AddressPair)
     {
-        this.dataStorage.deleteAddress(addressPair);
+        //TODO: Return the status of whether it was successful
+        this.netManager.removeMapping(addressPair);
+        //this.dataStorage.deleteAddress(addressPair);
     }
 
 }

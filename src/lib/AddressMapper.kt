@@ -25,6 +25,14 @@ class AddressMapper(private val dataStore:IPersistanceAdaptor){
         return this.dataStore.loadAll();
     }
 
+    fun addPortMapping(addressPair: AddressPair){
+        this.dataStore.saveAddress(addressPair);
+    }
+
+    fun deletePortMapping(addressPair:AddressPair){
+        this.dataStore.deleteAddress(addressPair);
+    }
+
     fun deleteKeyForChannel(channel: SocketChannel){
         val key = this.inverseSocketMappings[channel];
 

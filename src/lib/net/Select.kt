@@ -3,6 +3,7 @@ package lib.net
 import tools.Logger
 import java.nio.channels.*
 import java.nio.channels.spi.AbstractSelectableChannel
+import java.util.concurrent.locks.ReentrantLock
 
 /**
  * Created by bensoer on 02/03/16.
@@ -12,6 +13,8 @@ class Select {
 
     private val selector:Selector = Selector.open();
     private var keyRing: Set<SelectionKey>? = null;
+
+    private var registerServerLock = ReentrantLock();
 
     fun waitForEvent(): Int{
 
@@ -40,6 +43,9 @@ class Select {
     }
 
     fun registerServerChannel(channel: ServerSocketChannel) : SelectionKey{
+        //ensuring that there is no overlap in this process
+        this.registerServerLock.lock();
+
         Logger.log("Select - Registering Server Channel With Select");
 
         channel.configureBlocking(false);
@@ -49,6 +55,7 @@ class Select {
         //println(channel.validOps());
         val key: SelectionKey = channel.register(this.selector, interestSet);
 
+        this.registerServerLock.unlock();
         return key;
 
     }
@@ -63,6 +70,10 @@ class Select {
 
     fun getChannelForKey(key: SelectionKey): SelectableChannel {
         return key.channel();
+    }
+
+    fun getAllKeys() : MutableSet<SelectionKey>{
+        return this.selector.keys();
     }
 
 

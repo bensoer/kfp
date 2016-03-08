@@ -23,7 +23,49 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
         this.select = Select();
     }
 
-    fun setObservableMap(){
+    fun addMapping(addressPair:AddressPair):Boolean{
+
+        val serverSocketChannel = NetLibrary.createServerSocket(addressPair.localPort);
+        if(serverSocketChannel == null){
+            Logger.log("NetManager - ERROR - Failed To Create A Server Socket For New Port");
+            return false;
+        }else{
+            this.select.registerServerChannel(serverSocketChannel);
+            this.addressMapper.addPortMapping(addressPair);
+            return true;
+        }
+    }
+
+    fun removeMapping(addressPair:AddressPair):Boolean{
+        val keysSet = this.select.getAllKeys();
+
+        val iterator = keysSet.iterator();
+        while(iterator.hasNext()){
+            val key = iterator.next();
+
+            if(key.isAcceptable){
+                val channel = this.select.getChannelForKey(key) as ServerSocketChannel;
+                val listeningPort = channel.socket().localPort
+
+                //if this ServerSocket is listening on the same port then we know to delete it
+                if(listeningPort == addressPair.localPort){
+
+                    //close the channel
+                    channel.close();
+                    //cancel the key
+                    key.cancel();
+                    //remove from iterator ?
+                    iterator.remove();
+
+                    //remove from database
+                    this.addressMapper.deletePortMapping(addressPair);
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
 
     }
 
@@ -44,7 +86,9 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
 
             //if it succeeded register it with select
             if(socketChannel != null) {
-                this.select.registerServerChannel(socketChannel!!);
+                this.select.registerServerChannel(socketChannel);
+            }else{
+                Logger.log("NetManager - ERROR - Failed To Create A Server Socket For New Port");
             }
         }
 
