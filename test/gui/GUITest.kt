@@ -17,7 +17,7 @@ fun main(args: Array<String>)
     GUI.awaitInitialized()
 
     // adds a listener to GUI so we will be notified when user interacts with it
-    gui.listeners.add(listener)
+    gui.listeners = listener
 
     // add address pairs to GUI
     gui.addressPairs.add(AddressPair(80,InetSocketAddress("localhost",800)))
@@ -37,14 +37,16 @@ fun main(args: Array<String>)
  */
 private val listener = object:GUI.IListener
 {
-    override fun insert(addressPair:AddressPair)
+    override fun insert(addressPair:AddressPair):Boolean
     {
         println("insert($addressPair)")
+        return true
     }
 
-    override fun delete(addressPair:AddressPair)
+    override fun delete(addressPair:AddressPair):Boolean
     {
         println("delete($addressPair)")
+        return true
     }
 
     override fun exit()
