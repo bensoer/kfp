@@ -36,11 +36,11 @@ class SQLitePersistanceAdaptor(val DBNAME:String):IPersistanceAdaptor{
                 Class.forName("org.sqlite.JDBC");
                 connection = DriverManager.getConnection("jdbc:sqlite:" + this.DBNAME);
             } catch ( e:Exception ) {
-                Logger.log("Failed To Connect To SQLite Database");
+                Logger.log("SQLitePersistanceAdaptor - Failed To Connect To SQLite Database");
                 e.printStackTrace();
             }
 
-            Logger.log("Connection Succeeded");
+            Logger.log("SQLitePersistanceAdaptor - Connection Succeeded");
             this.setupTables();
         }
     }
