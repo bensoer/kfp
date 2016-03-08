@@ -42,4 +42,8 @@ private class GUIEventHandler(val netManager:NetManager): GUI.IListener{
         //this.dataStorage.deleteAddress(addressPair);
     }
 
+    override fun exit(){
+        this.netManager.terminate();
+    }
+
 }

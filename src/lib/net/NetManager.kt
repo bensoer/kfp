@@ -69,6 +69,11 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
 
     }
 
+    //shut this bad boy down
+    fun terminate(){
+
+    }
+
     //start the fun boys
     override fun run(){
 
