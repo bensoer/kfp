@@ -32,7 +32,7 @@ class GUI:Application()
         val mainLoop =
             {
                 Application.launch(GUI::class.java)
-                gui.listeners.forEach {it.exit()}
+                gui.listeners?.exit()
             }
 
         private val releasedOnApplicationStarted = CountDownLatch(1)
@@ -114,7 +114,7 @@ class GUI:Application()
     /**
      * elements in this set will be notified upon user interaction with [GUI].
      */
-    val listeners:MutableSet<IListener> = LinkedHashSet()
+    var listeners:IListener? = null
 
     /**
      * interface that [GUI] observers must implement to be notified by the [GUI]
@@ -124,14 +124,20 @@ class GUI:Application()
     {
         /**
          * called when the user adds a new [AddressPair] to the [GUI].
+         *
+         * @return true if the persistence operation was successful; false
+         * otherwise
          */
-        fun insert(addressPair:AddressPair)
+        fun insert(addressPair:AddressPair):Boolean
 
         /**
          * called when the user removes an existing [AddressPair] from the
          * [GUI].
+         *
+         * @return true if the persistence operation was successful; false
+         * otherwise
          */
-        fun delete(addressPair:AddressPair)
+        fun delete(addressPair:AddressPair):Boolean
 
         /**
          * called when the [GUI]'s main thread is terminated.
@@ -143,12 +149,14 @@ class GUI:Application()
     {
         override fun added(addressPair:AddressPair)
         {
-            listeners.forEach {it.insert(addressPair)}
+            // todo: check the retturn result
+            listeners?.insert(addressPair)
         }
 
         override fun removed(addressPair:AddressPair)
         {
-            listeners.forEach {it.delete(addressPair)}
+            // todo: check the retturn result
+            listeners?.delete(addressPair)
         }
     }
 }
