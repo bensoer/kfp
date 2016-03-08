@@ -15,9 +15,7 @@ class Select {
 
     fun waitForEvent(): Int{
 
-        Logger.log("Inside for Events");
         val readySet:Int = this.selector.select();
-        Logger.log("Ello");
 
         return readySet;
 
@@ -28,12 +26,13 @@ class Select {
     }
 
     fun registerChannel(channel: AbstractSelectableChannel) : SelectionKey{
+        Logger.log("Select - Registering Channel With Select");
 
         channel.configureBlocking(false);
 
         val interestSet = SelectionKey.OP_READ;
         //val key: SelectionKey = channel.register(this.selector, interestSet);
-        println(channel.validOps());
+        //println(channel.validOps());
         val key: SelectionKey = channel.register(this.selector, interestSet);
 
         return key;
@@ -47,7 +46,7 @@ class Select {
 
         val interestSet = SelectionKey.OP_ACCEPT;
         //val key: SelectionKey = channel.register(this.selector, interestSet);
-        println(channel.validOps());
+        //println(channel.validOps());
         val key: SelectionKey = channel.register(this.selector, interestSet);
 
         return key;
