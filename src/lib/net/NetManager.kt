@@ -18,6 +18,7 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
 
 
     private val select:Select;
+    private var keepGoing = true;
 
     init {
         this.select = Select();
@@ -71,7 +72,33 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
 
     //shut this bad boy down
     fun terminate(){
+        Logger.log("NetManager - System Terminating");
+        Logger.log("NetManager - Disabled While Loop From Continueing");
+        this.keepGoing = false;
 
+        Logger.log("NetManager - Now Closing All Channels and Keys");
+        //get all keys
+        var allKeys = this.select.getAllKeys();
+        var iterator = allKeys.iterator();
+        while(iterator.hasNext()){
+            val key = iterator.next();
+
+            //close all sockets
+            val channel = this.addressMapper.getSocketChannel(key);
+            channel?.close();
+
+            //cancel all keys
+            key.cancel();
+
+        }
+
+        Logger.log("NetManager - Closing The Select Engine");
+        //delete select
+        this.select.close();
+
+        Logger.log("NetManager - Deleting All Socket Mappings");
+        //delete all socket mappings
+        this.addressMapper.clearAllSocketMappings();
     }
 
     //start the fun boys
@@ -98,10 +125,16 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
         }
 
         //wait for something to happen
-        while(true){
+        while(keepGoing){
             Logger.log("Waiting For Events");
             val numberOfEvents = this.select.waitForEvent()
             Logger.log("Back From Events");
+
+            //double check we were not awoken by a termination
+            if(keepGoing == false){
+                Logger.log("NetManager:run - Termination Detected. Breaking Early To Avoid Exceptions");
+                break;
+            }
 
             val readyChannelKeys = this.select.getReadyChannels();
             val keyIterator = readyChannelKeys.iterator() as MutableIterator<SelectionKey>;
@@ -197,7 +230,6 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                         }
                     }else{
                         throw NullPointerException("The dataDestSocket Returned Null!");
-                        break;
                     }
 
                 }

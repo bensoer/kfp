@@ -27,19 +27,14 @@ fun main(argv:Array<String>){
 
 private class GUIEventHandler(val netManager:NetManager): GUI.IListener{
 
-    override fun insert(addressPair: AddressPair)
+    override fun insert(addressPair: AddressPair):Boolean
     {
-        //this.dataStorage.saveAddress(addressPair);
-        //TODO: Return the status of whether it was succesful
-        this.netManager.addMapping(addressPair);
-
+        return this.netManager.addMapping(addressPair);
     }
 
-    override fun delete(addressPair: AddressPair)
+    override fun delete(addressPair: AddressPair):Boolean
     {
-        //TODO: Return the status of whether it was successful
-        this.netManager.removeMapping(addressPair);
-        //this.dataStorage.deleteAddress(addressPair);
+        return this.netManager.removeMapping(addressPair);
     }
 
     override fun exit(){

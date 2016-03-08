@@ -112,5 +112,9 @@ class Select {
         return this.selector.keys();
     }
 
+    fun close(){
+        this.selector.close();
+    }
+
 
 }

@@ -63,4 +63,9 @@ class AddressMapper(private val dataStore: IPersistanceAdaptor){
         return this.socketMappings[key];
     }
 
+    fun clearAllSocketMappings(){
+        this.socketMappings.clear();
+        this.inverseSocketMappings.clear();
+    }
+
 }
