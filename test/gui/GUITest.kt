@@ -17,7 +17,7 @@ fun main(args: Array<String>)
     GUI.awaitInitialized()
 
     // adds a listener to GUI so we will be notified when user interacts with it
-    gui.listeners = listener
+    gui.listener = listener
 
     // add address pairs to GUI
     gui.addressPairs.add(AddressPair(80,InetSocketAddress("localhost",800)))

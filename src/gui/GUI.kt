@@ -12,6 +12,8 @@ import javafx.stage.Stage
 import tools.AddressPair
 import java.net.InetSocketAddress
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.LinkedBlockingQueue
+import kotlin.concurrent.thread
 
 private var _gui:GUI? = null
     set(value) = synchronized(GUI.Companion)
@@ -26,14 +28,13 @@ class GUI:Application()
 {
     companion object
     {
-
         /**
          * main loop of the [GUI]. this function blocks when executed; beware!
          */
         val mainLoop =
             {
                 Application.launch(GUI::class.java)
-                gui.listeners?.exit()
+                gui.executeOnListener({gui.listener?.exit()})
             }
 
         private val releasedOnApplicationStarted = CountDownLatch(1)
@@ -115,7 +116,37 @@ class GUI:Application()
     /**
      * elements in this set will be notified upon user interaction with [GUI].
      */
-    var listeners:IListener? = null
+    var listener:IListener? = null
+
+    private val listenerEventQueue = LinkedBlockingQueue<()->Unit>()
+
+    private var listenerThread:Thread = Thread()
+
+    private fun executeOnListener(function:()->Unit)
+    {
+        // enqueue functions into the event queue
+        listenerEventQueue.add(function)
+
+        // create the listener thread if it's not running
+        if (!listenerThread.isAlive)
+        {
+            listenerThread = thread(name = "listenerThread")
+            {
+                while (true)
+                {
+                    val callback:(()->Unit)? = listenerEventQueue.poll()
+                    if (callback != null)
+                    {
+                        callback()
+                    }
+                    else
+                    {
+                        return@thread
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * interface that [GUI] observers must implement to be notified by the [GUI]
@@ -150,41 +181,52 @@ class GUI:Application()
     {
         override fun added(addressPair:AddressPair)
         {
-            // todo: check the retturn result
-            if (listeners?.insert(addressPair) == false)
+            gui.executeOnListener()
             {
-                val alert = Alert(Alert.AlertType.ERROR)
-                alert.title = "Port Forwarder"
-                alert.headerText = "Persistence Failure"
-                alert.contentText =
-"""OHHHH MY GAAWWWD!!! Failed to insert entry: "${addressPair.localPort} -> ${addressPair.dest}" into persistent storage; it will be removed from the address pair list.
+                if (listener?.insert(addressPair) == false)
+                {
+                    Platform.runLater()
+                    {
+                        val alert = Alert(Alert.AlertType.ERROR)
+                        alert.title = "Port Forwarder"
+                        alert.headerText = "Persistence Failure"
+                        alert.contentText =
+                            """OHHHH MY GAAWWWD!!! Failed to insert entry: "${addressPair.localPort} -> ${addressPair.dest}" into persistent storage; it will be removed from the address pair list.
 
 You can try:
     • reentering the data
     • replacing your hard drive"""
-                alert.showAndWait()
+                        alert.showAndWait()
 
-                addressPairs.remove(addressPair)
+                        addressPairs.remove(addressPair)
+                    }
+                }
             }
         }
 
         override fun removed(addressPair:AddressPair)
         {
-            // todo: check the return result
-            if (listeners?.delete(addressPair) == false)
+            gui.executeOnListener()
             {
-                val alert = Alert(Alert.AlertType.ERROR)
-                alert.title = "Port Forwarder"
-                alert.headerText = "Persistence Failure"
-                alert.contentText =
-"""OH NOOOOO! Failed to remove entry: "${addressPair.localPort} -> ${addressPair.dest}" from persistent storage; it will be re-inserted into the address pair list.
+                // todo: check the return result
+                if (listener?.delete(addressPair) == false)
+                {
+                    Platform.runLater()
+                    {
+                        val alert = Alert(Alert.AlertType.ERROR)
+                        alert.title = "Port Forwarder"
+                        alert.headerText = "Persistence Failure"
+                        alert.contentText =
+                            """OH NOOOOO! Failed to remove entry: "${addressPair.localPort} -> ${addressPair.dest}" from persistent storage; it will be re-inserted into the address pair list.
 
 You can try:
     • removing the entry again
     • giving up"""
-                alert.showAndWait()
+                        alert.showAndWait()
 
-                addressPairs.add(addressPair)
+                        addressPairs.add(addressPair)
+                    }
+                }
             }
         }
     }
