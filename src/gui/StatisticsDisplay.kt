@@ -47,7 +47,10 @@ internal class StatisticsPane:GridPane()
 
     fun bytesForwarded(connection:InetSocketAddress,port:Int,numBytes:Int)
     {
-        bytesSentLastSecond.add(DelayedByteCount(connection,port,numBytes,System.currentTimeMillis()+TimeUnit.MILLISECONDS.convert(1,TimeUnit.SECONDS)))
+        synchronized(bytesSentLastSecond)
+        {
+            bytesSentLastSecond.add(DelayedByteCount(connection,port,numBytes,System.currentTimeMillis()+TimeUnit.MILLISECONDS.convert(1,TimeUnit.SECONDS)))
+        }
         Platform.runLater {bytesForwarded += numBytes}
     }
 
@@ -156,16 +159,16 @@ internal class StatisticsPane:GridPane()
         totalConnectionsDisplay.label.text = TOTAL_CONNECTIONS_LABEL
 
         usageByPortDisplay.minWidth = 300.0
-        usageByPortDisplay.minHeight = 100.0
+        usageByPortDisplay.minHeight = 150.0
         usageByPortDisplay.prefWidth = 300.0
-        usageByPortDisplay.prefHeight = 100.0
+        usageByPortDisplay.prefHeight = 150.0
         usageByPortDisplay.animated = false
         usageByPortDisplay.labelsVisible = true
 
-        usageByConnectionDisplay.minWidth = 300.0
-        usageByConnectionDisplay.minHeight = 100.0
-        usageByConnectionDisplay.prefWidth = 300.0
-        usageByConnectionDisplay.prefHeight = 100.0
+        usageByConnectionDisplay.minWidth = 350.0
+        usageByConnectionDisplay.minHeight = 150.0
+        usageByConnectionDisplay.prefWidth = 350.0
+        usageByConnectionDisplay.prefHeight = 150.0
         usageByConnectionDisplay.animated = false
         usageByConnectionDisplay.labelsVisible = true
 
@@ -175,11 +178,6 @@ internal class StatisticsPane:GridPane()
         add(currentConnectionsDisplay)
         add(maxConnectionsDisplay)
         add(totalConnectionsDisplay)
-
-        // todo: remove once testing is done
-        val button = Button("sendBytes")
-        add(button,0,6,1,1)
-        button.setOnAction {bytesForwarded(InetSocketAddress.createUnresolved("192.168.1.5/32",8000),80,10)}
 
         // add pie charts. each should be in its own column and span all rows.
         // todo: find out way to get the row count some other way??? eh..
@@ -192,30 +190,35 @@ internal class StatisticsPane:GridPane()
             while (true)
             {
                 Thread.sleep(100)
-                while (bytesSentLastSecond.poll() != null);
                 Platform.runLater()
                 {
-                    // update throughput
-                    throughput = bytesSentLastSecond.sumBy {it.byteCount}
-
-                    // update usageByPort
-                    run()
+                    synchronized(bytesSentLastSecond)
                     {
-                        val pieData = bytesSentLastSecond
-                            .groupBy {it.port.toString()}
-                            .mapValues {it.value.sumBy {it.byteCount}.toDouble()}
-                            .plus("unused" to (maxThroughput-throughput).toDouble())
-                        updatePieChart(usageByPortDisplay,pieData)
-                    }
+                        // remove expired bytes sent last second
+                        while (bytesSentLastSecond.poll() != null);
 
-                    // update usageByConnection
-                    run()
-                    {
-                        val pieData = bytesSentLastSecond
-                            .groupBy {it.connection.toString()}
-                            .mapValues {it.value.sumBy {it.byteCount}.toDouble()}
-                            .plus("unused" to (maxThroughput-throughput).toDouble())
-                        updatePieChart(usageByConnectionDisplay,pieData)
+                        // update throughput
+                        throughput = bytesSentLastSecond.sumBy {it.byteCount}
+
+                        // update usageByPort
+                        run()
+                        {
+                            val pieData = bytesSentLastSecond
+                                .groupBy {it.port.toString()}
+                                .mapValues {it.value.sumBy {it.byteCount}.toDouble()}
+                                .plus("unused" to (maxThroughput-throughput).toDouble())
+                            updatePieChart(usageByPortDisplay,pieData)
+                        }
+
+                        // update usageByConnection
+                        run()
+                        {
+                            val pieData = bytesSentLastSecond
+                                .groupBy {"${it.connection.hostString}:${it.connection.port}"}
+                                .mapValues {it.value.sumBy {it.byteCount}.toDouble()}
+                                .plus("unused" to (maxThroughput-throughput).toDouble())
+                            updatePieChart(usageByConnectionDisplay,pieData)
+                        }
                     }
                 }
             }
@@ -227,7 +230,7 @@ internal class StatisticsPane:GridPane()
         with(pieChart.data)
         {
             // remove zeroed data
-            removeAll {it.name !in pieData.keys}
+            (this as MutableIterable<PieChart.Data>).removeAll {it.name !in pieData.keys}
             // update existing data
             forEach {it.pieValue = pieData[it.name]!!}
             // add new data
