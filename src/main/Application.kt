@@ -40,7 +40,7 @@ fun main(args: Array<String>){
 
 
     // adds a listener to GUI so we will be notified when user interacts with it
-    gui.listeners = guiEventHandler;
+    gui.listener = guiEventHandler;
 
     //start network thread
     netManager.start();
