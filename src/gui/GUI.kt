@@ -33,6 +33,7 @@ class GUI:Application()
          */
         val mainLoop =
             {
+                Thread.currentThread().name = "guiLooper"
                 Application.launch(GUI::class.java)
                 gui.executeOnListener({gui.listener?.exit()})
             }

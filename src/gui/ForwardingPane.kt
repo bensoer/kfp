@@ -282,7 +282,7 @@ private class ForwardingEntry()
         validationThread.interrupt()
 
         // begin the validation on the validation thread
-        validationThread = thread()
+        validationThread = thread(name = "InetAddressValidationThread")
         {
             // sleep a bit because validation takes a long time, and we want to
             // make sure that use user has stopped typing before we go ahead and

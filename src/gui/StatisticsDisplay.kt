@@ -187,7 +187,7 @@ internal class StatisticsPane:GridPane()
         add(usageByConnectionDisplay,COL_INDEX_USAGE_BY_CONNECTION,0,1,nextRow+1)
 
         // start a thread that constantly updates the throughput
-        thread(isDaemon = true)
+        thread(isDaemon = true,name = "statisticsPaneUpdater")
         {
             while (true)
             {
