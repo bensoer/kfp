@@ -164,12 +164,12 @@ class ForwardingPane:GridPane()
 
                 // sync up the addressPairs map: remove old entries
                 val toRemove = _addressPairs.filter {it !in allAddressPairs}
-                toRemove.forEach {listener?.removed(it)}
+                Platform.runLater {toRemove.forEach {listener?.removed(it)}}
                 _addressPairs.removeAll(toRemove)
 
                 // sync up the addressPairs map: add new entries
                 val toAdd = allAddressPairs.filter {it !in _addressPairs}
-                toAdd.forEach {listener?.added(it)}
+                Platform.runLater {toAdd.forEach {listener?.added(it)}}
                 _addressPairs.addAll(toAdd)
             }
         }
