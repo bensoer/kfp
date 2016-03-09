@@ -3,6 +3,7 @@ package lib
 import gui.GUI
 import lib.db.IPersistanceAdaptor
 import lib.db.SQLitePersistanceAdaptor
+import lib.net.AddressMapper
 import lib.net.NetManager
 import tools.AddressPair
 
@@ -13,26 +14,31 @@ import tools.AddressPair
 fun main(argv:Array<String>){
 
     val storage = SQLitePersistanceAdaptor("portmap.db");
-    val guiEventHandler = GUIEventHandler(storage);
     val addressMapper = AddressMapper(storage);
-
     val netManager = NetManager(addressMapper);
+
+    val guiEventHandler = GUIEventHandler(netManager);
+
     netManager.start();
 
     netManager.join();
 
 }
 
-private class GUIEventHandler(val dataStorage:IPersistanceAdaptor): GUI.IListener{
+private class GUIEventHandler(val netManager:NetManager): GUI.IListener{
 
-    override fun insert(addressPair: AddressPair)
+    override fun insert(addressPair: AddressPair):Boolean
     {
-        this.dataStorage.saveAddress(addressPair);
+        return this.netManager.addMapping(addressPair);
     }
 
-    override fun delete(addressPair: AddressPair)
+    override fun delete(addressPair: AddressPair):Boolean
     {
-        this.dataStorage.deleteAddress(addressPair);
+        return this.netManager.removeMapping(addressPair);
+    }
+
+    override fun exit(){
+        this.netManager.terminate();
     }
 
 }

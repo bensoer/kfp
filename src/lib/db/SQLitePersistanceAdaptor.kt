@@ -105,7 +105,7 @@ class SQLitePersistanceAdaptor(val DBNAME:String):IPersistanceAdaptor{
         val sql =
                 "DELETE FROM ADDRESSPAIRS WHERE LOCALPORT = '" +
                         localPort + "' AND DESTIP = '" + destination.hostString +
-                        "'" + " AND DESTPORT = " + "'" + destination.port ;
+                        "'" + " AND DESTPORT = " + destination.port;
         statement.executeUpdate(sql);
         statement.close();
         this.disconnectFromDatabase();
@@ -130,7 +130,7 @@ class SQLitePersistanceAdaptor(val DBNAME:String):IPersistanceAdaptor{
         statement.executeUpdate(sql);
         statement.close();
         this.disconnectFromDatabase();
-        this.lock.lock();
+        this.lock.unlock();
 
     }
 
