@@ -56,7 +56,6 @@ class GUI:Application()
      * updated. modifying this map will not trigger [IListener] methods to be
      * called.
      */
-    // todo: hook up with backend
     val addressPairs:ObservableSet<AddressPair> get() = forwardingPane.addressPairs
 
     private val forwardingPane:ForwardingPane by lazy {ForwardingPane()}
@@ -104,13 +103,10 @@ class GUI:Application()
         releasedOnApplicationStarted.countDown()
     }
 
-    // todo: hook up with backend
     fun bytesForwarded(connection:InetSocketAddress,port:Int,numBytes:Int) = statisticsPane.bytesForwarded(connection,port,numBytes)
 
-    // todo: hook up with backend
     fun connectionOpened() = statisticsPane.connectionOpened()
 
-    // todo: hook up with backend
     fun connectionClosed() = statisticsPane.connectionClosed()
 
     /**
