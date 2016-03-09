@@ -1,4 +1,4 @@
-package lib
+package lib.net
 
 import gui.GUI
 import lib.db.IPersistanceAdaptor
@@ -11,11 +11,11 @@ import java.util.*
  * Created by bensoer on 28/02/16.
  */
 
-class AddressMapper(private val dataStore:IPersistanceAdaptor){
+class AddressMapper(private val dataStore: IPersistanceAdaptor){
 
     //private var portMappings:Set<AddressPair>;
-    private var socketMappings:HashMap<SelectionKey,SocketChannel> = HashMap();
-    private var inverseSocketMappings:HashMap<SocketChannel,SelectionKey> = HashMap();
+    private var socketMappings: HashMap<SelectionKey, SocketChannel> = HashMap();
+    private var inverseSocketMappings: HashMap<SocketChannel, SelectionKey> = HashMap();
 
     init {
         //this.portMappings = dataStore.loadAll()
@@ -23,6 +23,14 @@ class AddressMapper(private val dataStore:IPersistanceAdaptor){
 
     fun getAllPortMappings(): Set<AddressPair> {
         return this.dataStore.loadAll();
+    }
+
+    fun addPortMapping(addressPair: AddressPair){
+        this.dataStore.saveAddress(addressPair);
+    }
+
+    fun deletePortMapping(addressPair: AddressPair){
+        this.dataStore.deleteAddress(addressPair);
     }
 
     fun deleteKeyForChannel(channel: SocketChannel){
@@ -51,8 +59,13 @@ class AddressMapper(private val dataStore:IPersistanceAdaptor){
         this.inverseSocketMappings.put(channel,key);
     }
 
-    fun getSocketChannel(key: SelectionKey):SocketChannel?{
+    fun getSocketChannel(key: SelectionKey): SocketChannel?{
         return this.socketMappings[key];
+    }
+
+    fun clearAllSocketMappings(){
+        this.socketMappings.clear();
+        this.inverseSocketMappings.clear();
     }
 
 }

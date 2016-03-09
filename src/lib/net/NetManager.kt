@@ -2,9 +2,10 @@ package lib.net
 
 import gui.GUI
 import javafx.collections.ObservableMap
-import lib.AddressMapper
+import lib.net.AddressMapper
 import tools.AddressPair
 import tools.Logger
+import java.net.InetSocketAddress
 import java.net.Socket
 import java.nio.channels.SelectionKey
 import java.nio.channels.ServerSocketChannel
@@ -18,13 +19,104 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
 
 
     private val select:Select;
+    private var keepGoing = true;
 
     init {
         this.select = Select();
     }
 
-    fun setObservableMap(){
+    var listener: IListener? = null;
+    interface IListener {
 
+        fun bytesTransfered(sourceAddress:InetSocketAddress, localPort:Int, bytesTransferred:Int);
+
+        fun connectionOpened();
+
+        fun connectionClosed();
+    }
+
+    fun addMapping(addressPair:AddressPair):Boolean{
+
+        val serverSocketChannel = NetLibrary.createServerSocket(addressPair.localPort);
+        if(serverSocketChannel == null){
+            Logger.log("NetManager - ERROR - Failed To Create A Server Socket For New Port");
+            return false;
+        }else{
+            this.addressMapper.addPortMapping(addressPair);
+            this.select.registerServerChannel(serverSocketChannel);
+            Logger.log("NetManager - Mapping Added Complete");
+            return true;
+        }
+        Logger.log("why am i here");
+    }
+
+    fun removeMapping(addressPair:AddressPair):Boolean{
+        val keysSet = this.select.getAllKeys();
+
+        val iterator = keysSet.iterator();
+        while(iterator.hasNext()){
+            val key = iterator.next();
+
+            println("Number of Keys: ${keysSet.size}");
+
+            if(this.select.getChannelForKey(key) is ServerSocketChannel){
+                val channel = this.select.getChannelForKey(key) as ServerSocketChannel;
+                val listeningPort = channel.socket().localPort
+
+                println("Listening Port: $listeningPort");
+
+                //if this ServerSocket is listening on the same port then we know to delete it
+                if(listeningPort == addressPair.localPort){
+
+                    //close the channel
+                    channel.close();
+                    //cancel the key
+                    key.cancel();
+                    //remove from iterator ?
+                    //iterator.remove();
+
+                    //remove from database
+                    this.addressMapper.deletePortMapping(addressPair);
+
+                    return true;
+                }
+            }
+        }
+
+        Logger.log("NetMapper - ERROR - Failed To Delete Port Mapping");
+        return false;
+
+    }
+
+    //shut this bad boy down
+    fun terminate(){
+        Logger.log("NetManager - System Terminating");
+        Logger.log("NetManager - Disabled While Loop From Continueing");
+        this.keepGoing = false;
+
+        Logger.log("NetManager - Now Closing All Channels and Keys");
+        //get all keys
+        var allKeys = this.select.getAllKeys();
+        var iterator = allKeys.iterator();
+        while(iterator.hasNext()){
+            val key = iterator.next();
+
+            //close all sockets
+            val channel = this.addressMapper.getSocketChannel(key);
+            channel?.close();
+
+            //cancel all keys
+            key.cancel();
+
+        }
+
+        Logger.log("NetManager - Closing The Select Engine");
+        //delete select
+        this.select.close();
+
+        Logger.log("NetManager - Deleting All Socket Mappings");
+        //delete all socket mappings
+        this.addressMapper.clearAllSocketMappings();
     }
 
     //start the fun boys
@@ -44,15 +136,27 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
 
             //if it succeeded register it with select
             if(socketChannel != null) {
-                this.select.registerServerChannel(socketChannel!!);
+                this.select.registerServerChannel(socketChannel);
+            }else{
+                Logger.log("NetManager - ERROR - Failed To Create A Server Socket For New Port");
             }
         }
 
         //wait for something to happen
-        while(true){
-            Logger.log("Waiting For Events");
+        while(keepGoing){
+            //Logger.log("Waiting For Events");
             val numberOfEvents = this.select.waitForEvent()
-            Logger.log("Back From Events");
+            //Logger.log("Back From Events");
+
+            //double check we were not awoken by a termination
+            if(keepGoing == false){
+                Logger.log("NetManager:run - Termination Detected. Breaking Early To Avoid Exceptions");
+                break;
+            }
+
+            if(numberOfEvents == 0){
+                continue;
+            }
 
             val readyChannelKeys = this.select.getReadyChannels();
             val keyIterator = readyChannelKeys.iterator() as MutableIterator<SelectionKey>;
@@ -90,11 +194,12 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                     //val srcKeys = this.select.registerChannel(serverSocketSession);
                     val srcKeys = this.select.registerChannel(serverSocketSession);
 
-                    Logger.log("NetManager - Creating Socket To The Forwarding Location");
+                    Logger.log("NetManager - Getting Location To The Forwarding Location From Local Port");
                     //lookup where this is supposed to go
                     val localPort = serverSocketChannel.socket().localPort;
                     val addressPair = this.addressMapper.getPortMapping(localPort);
 
+                    Logger.log("NetManager - Creating Socket To The Forwarding Location");
                     //create a connection with where its supposed to go
                     val clientSocketChannel = NetLibrary.createClientSocket(addressPair!!.dest);
                     if(clientSocketChannel == null){
@@ -119,6 +224,9 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                         addressMapper.createSocketMapping(srcKeys,clientSocketChannel);
                         addressMapper.createSocketMapping(destKeys,serverSocketSession);
                         //addressMapper.createSocketMapping(destKeys,serverSocketSession);
+
+                        //statistics call
+                        this.listener?.connectionOpened();
                     }
 
 
@@ -136,19 +244,28 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                         println(dataDestChannel);
                         val bytesTransferred = NetLibrary.transferDataFromChannels(dataSourceChannel, dataDestChannel);
 
+                        listener?.bytesTransfered(dataSourceChannel.remoteAddress as InetSocketAddress, dataSourceChannel.socket().localPort, bytesTransferred)
                         if(bytesTransferred == -1){
                             Logger.log("NetManager - Negative Bytes Transferred. Connection Assumed Closed. Cleaning Up");
 
+                            //Close Date Source Channel
                             dataSourceChannel.close();
                             //remove mappings so that they do no communicate with eachother
                             addressMapper.deleteKeyForChannel(dataDestChannel);
                             //cancel the key so it is removed from select
                             key.cancel();
+
+                            //Close the Data Dest Channel
+                            dataDestChannel.close();
+                            addressMapper.deleteKeyForChannel(dataSourceChannel);
+                            key.cancel();
+
+                            //tell statistics of closed socket
+                            this.listener?.connectionClosed();
                             continue;
                         }
                     }else{
                         throw NullPointerException("The dataDestSocket Returned Null!");
-                        break;
                     }
 
                 }

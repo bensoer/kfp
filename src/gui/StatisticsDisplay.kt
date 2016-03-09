@@ -222,17 +222,17 @@ internal class StatisticsPane:GridPane()
         }
     }
 
-    private fun updatePieChart(pieChart:PieChart,data:Map<String,Double>)
+    private fun updatePieChart(pieChart:PieChart, pieData:Map<String,Double>)
     {
         with(pieChart.data)
         {
             // remove zeroed data
-            removeAll {it.name !in data.keys}
+            removeAll {it.name !in pieData.keys}
             // update existing data
-            forEach {it.pieValue = data[it.name]!!}
+            forEach {it.pieValue = pieData[it.name]!!}
             // add new data
             val existingPieData = map {it.name}.toSet()
-            val newPieData = data.filter {it.key !in existingPieData}
+            val newPieData = pieData.filter {it.key !in existingPieData}
             addAll(newPieData.map {PieChart.Data(it.key,it.value)})
         }
     }
