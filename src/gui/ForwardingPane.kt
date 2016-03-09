@@ -190,7 +190,7 @@ private class ForwardingEntry()
         /**
          * milliseconds to delay
          */
-        private const val VALIDATION_DELAY_MILLIS = 200L
+        private const val VALIDATION_DELAY_MILLIS = 1000L
     }
 
     var localPort:Int? = null
