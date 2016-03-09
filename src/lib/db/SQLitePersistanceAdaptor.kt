@@ -52,7 +52,7 @@ class SQLitePersistanceAdaptor(val DBNAME:String):IPersistanceAdaptor{
     }
 
     private fun databaseExists():Boolean{
-        val file: File = File("test-storage.db");
+        val file: File = File(DBNAME);
         return file.exists();
     }
 
