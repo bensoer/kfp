@@ -26,7 +26,7 @@ class Select {
      */
     fun waitForEvent(): Int{
 
-        val readySet:Int = this.selector.select();
+        val readySet:Int = this.selector.select(10);
 
         return readySet;
 
