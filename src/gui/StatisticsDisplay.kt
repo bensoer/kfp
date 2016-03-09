@@ -92,7 +92,7 @@ internal class StatisticsPane:GridPane()
         {
             val delta = value-field
             if (delta > 0) totalConnections += delta
-            if (value > maxConnections) maxConnections = currentConnections
+            if (value > maxConnections) maxConnections = value
             currentConnectionsDisplay.value.text = value.toString()
             field = value
         }
