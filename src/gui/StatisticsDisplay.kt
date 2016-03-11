@@ -10,6 +10,7 @@ import javafx.scene.layout.ColumnConstraints
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.Priority
 import java.net.InetSocketAddress
+import java.util.*
 import java.util.concurrent.DelayQueue
 import java.util.concurrent.Delayed
 import java.util.concurrent.TimeUnit
@@ -184,45 +185,9 @@ internal class StatisticsPane:GridPane()
         add(usageByPortDisplay,COL_INDEX_USAGE_BY_PORT,0,1,nextRow+1)
         add(usageByConnectionDisplay,COL_INDEX_USAGE_BY_CONNECTION,0,1,nextRow+1)
 
-        // start a thread that constantly updates the throughput
-        thread(isDaemon = true,name = "statisticsPaneUpdater")
-        {
-            while (true)
-            {
-                Thread.sleep(100)
-                Platform.runLater()
-                {
-                    synchronized(bytesSentLastSecond)
-                    {
-                        // remove expired bytes sent last second
-                        while (bytesSentLastSecond.poll() != null);
-
-                        // update throughput
-                        throughput = bytesSentLastSecond.sumBy {it.byteCount}
-
-                        // update usageByPort
-                        run()
-                        {
-                            val pieData = bytesSentLastSecond
-                                .groupBy {it.port.toString()}
-                                .mapValues {it.value.sumBy {it.byteCount}.toDouble()}
-                                .plus("unused" to (maxThroughput-throughput).toDouble())
-                            updatePieChart(usageByPortDisplay,pieData)
-                        }
-
-                        // update usageByConnection
-                        run()
-                        {
-                            val pieData = bytesSentLastSecond
-                                .groupBy {"${it.connection.hostString}:${it.connection.port}"}
-                                .mapValues {it.value.sumBy {it.byteCount}.toDouble()}
-                                .plus("unused" to (maxThroughput-throughput).toDouble())
-                            updatePieChart(usageByConnectionDisplay,pieData)
-                        }
-                    }
-                }
-            }
-        }
+        // start a timer to update the GUI display
+        Timer("statisticsPaneGuiUpdater",true)
+            .scheduleAtFixedRate(UpdateGuiTask(),100,100)
     }
 
     private fun updatePieChart(pieChart:PieChart, pieData:Map<String,Double>)
@@ -245,6 +210,44 @@ internal class StatisticsPane:GridPane()
         add(newTextDisplay.label,COL_INDEX_LABEL,nextRow)
         add(newTextDisplay.value,COL_INDEX_CONTENT,nextRow)
         nextRow++
+    }
+
+    private inner class UpdateGuiTask:TimerTask()
+    {
+        override fun run()
+        {
+            Platform.runLater()
+            {
+                synchronized(bytesSentLastSecond)
+                {
+                    // remove expired bytes sent last second
+                    while (bytesSentLastSecond.poll() != null);
+
+                    // update throughput
+                    throughput = bytesSentLastSecond.sumBy {it.byteCount}
+
+                    // update usageByPort
+                    run()
+                    {
+                        val pieData = bytesSentLastSecond
+                            .groupBy {it.port.toString()}
+                            .mapValues {it.value.sumBy {it.byteCount}.toDouble()}
+                            .plus("unused" to (maxThroughput-throughput).toDouble())
+                        updatePieChart(usageByPortDisplay,pieData)
+                    }
+
+                    // update usageByConnection
+                    run()
+                    {
+                        val pieData = bytesSentLastSecond
+                            .groupBy {"${it.connection.hostString}:${it.connection.port}"}
+                            .mapValues {it.value.sumBy {it.byteCount}.toDouble()}
+                            .plus("unused" to (maxThroughput-throughput).toDouble())
+                        updatePieChart(usageByConnectionDisplay,pieData)
+                    }
+                }
+            }
+        }
     }
 }
 

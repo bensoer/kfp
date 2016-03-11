@@ -252,7 +252,9 @@ private class ForwardingEntry()
 
     var stateObserver:ForwardingEntry.Observer? = null
 
-    private var validationThread:Thread = Thread()
+    private var validateInputTask:ValidateInputTask? = null
+
+    private var validateInputTimer = Timer("validateInputTimer",true)
 
     init
     {
@@ -278,47 +280,10 @@ private class ForwardingEntry()
 
     private fun validateAndNotify() = synchronized(this)
     {
-        // interrupt the previous thread so it will abort its callback operation
-        validationThread.interrupt()
-
-        // begin the validation on the validation thread
-        validationThread = thread(name = "InetAddressValidationThread")
-        {
-            // sleep a bit because validation takes a long time, and we want to
-            // make sure that use user has stopped typing before we go ahead and
-            // try to validate the input
-            try
-            {
-                Thread.sleep(VALIDATION_DELAY_MILLIS)
-            }
-            catch(ex:InterruptedException)
-            {
-                return@thread
-            }
-
-            // try to resolve addresses
-            localPort = try {localPortTextField.text.toInt()} catch(ex:Exception) {null}
-            dstSockAddr = validateAddress(dstAddrTextField.text,dstPortTextField.text)
-
-            // update the error feedback on the GUI
-            if (localPort == null)
-                error = error.copy(localPort = true)
-            else
-                error = error.copy(localPort = false)
-            if (dstSockAddr == null)
-                error = error.copy(dstSockAddr = true)
-            else
-                error = error.copy(dstSockAddr = false)
-
-            // set instance variable sock addresses
-            if (!Thread.interrupted())
-            {
-                Platform.runLater()
-                {
-                    stateObserver?.onDataChanged(this@ForwardingEntry)
-                }
-            }
-        }
+        validateInputTask?.cancel()
+        validateInputTask = ValidateInputTask()
+        validateInputTimer.schedule(validateInputTask,VALIDATION_DELAY_MILLIS)
+        validateInputTimer.purge()
     }
 
     private fun validateAddress(host:String,port:String):InetSocketAddress?
@@ -342,5 +307,34 @@ private class ForwardingEntry()
     interface Observer
     {
         fun onDataChanged(observee:ForwardingEntry);
+    }
+
+    private inner class ValidateInputTask:TimerTask()
+    {
+        override fun run()
+        {
+            // try to resolve addresses
+            localPort = try {localPortTextField.text.toInt()} catch(ex:Exception) {null}
+            dstSockAddr = validateAddress(dstAddrTextField.text,dstPortTextField.text)
+
+            // update the error feedback on the GUI
+            if (localPort == null)
+                error = error.copy(localPort = true)
+            else
+                error = error.copy(localPort = false)
+            if (dstSockAddr == null)
+                error = error.copy(dstSockAddr = true)
+            else
+                error = error.copy(dstSockAddr = false)
+
+            // set instance variable sock addresses
+            if (!Thread.interrupted())
+            {
+                Platform.runLater()
+                {
+                    stateObserver?.onDataChanged(this@ForwardingEntry)
+                }
+            }
+        }
     }
 }
