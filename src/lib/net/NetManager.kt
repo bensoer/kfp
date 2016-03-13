@@ -287,7 +287,7 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                                 continue;
                             }
                         }else{
-                            throw NullPointerException("The dataDestSocket Returned Null!");
+                            throw NullPointerException("NetworkManager - The TCP dataDestSocket Returned Null!");
                         }
 
 
@@ -325,6 +325,7 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                                 //register with select
                                 val destKeys = this.select.registerChannel(dataDestChannel);
 
+                                //TODO: HOW MAP DO ?
                                 //create mappings for future
                                 this.addressMapper.createDatagramMapping(dataSourceRemoteAddress, dataDestChannel);
                                 //this.addressMapper.createDatagramMapping(dataDestLocalAddress, dataSourceChannel);
@@ -333,7 +334,7 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
 
                         }else{
 
-                            //means the mapping is know and this is a known connection
+                            //means the mapping is known and this is a known connection
 
 
 
