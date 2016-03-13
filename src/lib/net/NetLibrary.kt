@@ -4,10 +4,7 @@ import tools.Logger
 import java.io.IOException
 import java.net.*
 import java.nio.ByteBuffer
-import java.nio.channels.SelectionKey
-import java.nio.channels.Selector
-import java.nio.channels.ServerSocketChannel
-import java.nio.channels.SocketChannel
+import java.nio.channels.*
 import java.nio.charset.Charset
 
 
@@ -69,7 +66,7 @@ class NetLibrary{
          * null. If it is successful, this method will return the SocketChannel
          */
         fun createClientSocket(address:InetSocketAddress): SocketChannel? {
-            Logger.log("NetLibrary - Attemping to connect to ${address.hostString} on port ${address.port}");
+            Logger.log("NetLibrary - Attemping to TCP connect to ${address.hostString} on port ${address.port}");
             try{
 
 
@@ -93,6 +90,59 @@ class NetLibrary{
             }
         }
 
+        fun createUDPClientSocket(address:InetSocketAddress): DatagramChannel? {
+            Logger.log("NetLibrary - Attempting to UDP connect to ${address.hostString} on port ${address.port}");
+
+            try{
+                val channel: DatagramChannel = DatagramChannel.open()
+                channel.connect(address);
+
+                while(!channel.isConnected){
+                    //wait for it
+                }
+
+                return channel;
+            }catch(uhe: UnknownHostException){
+                Logger.log("NetLibrary - Unable To resolve UDP Host Of: ${address.hostName}");
+                uhe.printStackTrace();
+                return null;
+
+            }catch(ioe: IOException){
+                Logger.log("NetLibrary - UDP Unable To Access IO");
+                ioe.printStackTrace();
+                return null;
+            }
+
+        }
+
+        fun createUDPServerSocket(portNumber: Int): DatagramChannel?{
+            Logger.log("NetLibrary - Attempting to Create A  UDP Server Socket on port $portNumber");
+
+            try{
+                //create an address of here
+                val localAddress = InetSocketAddress(portNumber); //should be wildcard bound now ?
+                //create a channel
+                val channel = DatagramChannel.open();
+
+                //enable reuse of address
+                val socketOption = StandardSocketOptions.SO_REUSEADDR;
+                channel.setOption(socketOption, true);
+
+                //bind the address
+                channel.bind(localAddress);
+
+                //return the address
+                return channel;
+
+            }catch(ioe: IOException){
+                Logger.log("NetLibrary - UDP Unable To Access IO");
+                ioe.printStackTrace();
+                return null;
+            }
+
+
+        }
+
         /**
          * createServerSocket creates a ServerSocketChannel using the passed in port number to bind to. If the
          * port is unable to be bound to, the function will return null. If it is successful it will return the
@@ -104,7 +154,7 @@ class NetLibrary{
             try{
 
                 //create an address of here
-                val localAddress = InetSocketAddress("localhost", portNumber);
+                val localAddress = InetSocketAddress(portNumber); //should be wildcard bound now ?
                 //create a channel
                 val channel = ServerSocketChannel.open();
 
