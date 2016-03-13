@@ -23,7 +23,7 @@ class SQLitePersistanceAdaptor(val DBNAME:String):IPersistanceAdaptor{
         "(ID          INTEGER     PRIMARY KEY AUTOINCREMENT," +
         " LOCALPORT   TEXT        NOT NULL, " +
         " DESTIP      TEXT        NOT NULL, " +
-        " DESTPORT    INTEGER     NOT NULL" +
+        " DESTPORT    INTEGER     NOT NULL," +
         " TYPE        TEXT        NOT NULL)";
 
 

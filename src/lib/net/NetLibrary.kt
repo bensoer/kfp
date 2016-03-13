@@ -149,7 +149,7 @@ class NetLibrary{
          * ServerSocketChannel
          */
         fun createServerSocket(portNumber: Int): ServerSocketChannel? {
-            Logger.log("NetLibrary - Attempting to Create A Server Socket on port $portNumber");
+            Logger.log("NetLibrary - Attempting to Create A TCP Server Socket on port $portNumber");
 
             try{
 

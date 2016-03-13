@@ -1,5 +1,7 @@
 package lib.net
 
+import com.sun.javaws.exceptions.InvalidArgumentException
+import com.sun.xml.internal.fastinfoset.util.StringArray
 import gui.GUI
 import javafx.collections.ObservableMap
 import lib.net.AddressMapper
@@ -7,6 +9,7 @@ import tools.AddressPair
 import tools.Logger
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.nio.channels.DatagramChannel
 import java.nio.channels.SelectionKey
 import java.nio.channels.ServerSocketChannel
 import java.nio.channels.SocketChannel
@@ -131,15 +134,34 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
         while(iterator.hasNext()){
             val addressPair = iterator.next();
 
-            //create a listening socket for each one
-            val socketChannel = NetLibrary.createServerSocket(addressPair.localPort);
 
-            //if it succeeded register it with select
-            if(socketChannel != null) {
-                this.select.registerServerChannel(socketChannel);
+            if(addressPair.type.equals("TCP")){
+                val socketChannel = NetLibrary.createServerSocket(addressPair.localPort);
+
+                //if it succeeded register it with select
+                if(socketChannel != null) {
+                    this.select.registerServerChannel(socketChannel);
+                }else{
+                    throw NullPointerException("NetManager - Failed to Create a TCP Server Socket For New Port");
+                }
+
+
+            }else if(addressPair.type.equals("UDP")){
+                val datagramChannel = NetLibrary.createUDPServerSocket(addressPair.localPort);
+
+                //if it succeeded register it with select
+                if(datagramChannel != null) {
+                    this.select.registerChannel(datagramChannel);
+                }else{
+                    throw NullPointerException("NetManager - Failed to Create a UDP Server Socket For New Port");
+                }
+
             }else{
-                Logger.log("NetManager - ERROR - Failed To Create A Server Socket For New Port");
+                throw IllegalArgumentException("NetManager - No TYPE Supplied for Channel. Unable To Bind");
             }
+
+
+
         }
 
         //wait for something to happen
@@ -170,7 +192,7 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                 }
 
                 if(this.select.isANewConnection(key)){
-                    Logger.log("NetManager - Found A New Connections");
+                    Logger.log("NetManager - Found A New TCP Connection");
 
                     //get the channel
                     val channel = this.select.getChannelForKey(key);
@@ -197,7 +219,7 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                     Logger.log("NetManager - Getting Location To The Forwarding Location From Local Port");
                     //lookup where this is supposed to go
                     val localPort = serverSocketChannel.socket().localPort;
-                    val addressPair = this.addressMapper.getPortMapping(localPort);
+                    val addressPair = this.addressMapper.getPortMapping(localPort, "TCP");
 
                     Logger.log("NetManager - Creating Socket To The Forwarding Location");
                     //create a connection with where its supposed to go
@@ -235,38 +257,96 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                     Logger.log("NetManager - Found Data To Read");
 
                     //get the source socket - were gonna be balsy and cast
-                    val dataSourceChannel = key.channel() as SocketChannel;
+                    if(key.channel() is SocketChannel){
 
+                        val dataSourceChannel = key.channel() as SocketChannel;
+                        //use socket mapper to find the other socket that we need
+                        val dataDestChannel = addressMapper.getSocketChannel(key);
+                        if(dataDestChannel != null){
+                            println(dataDestChannel);
+                            val bytesTransferred = NetLibrary.transferDataFromChannels(dataSourceChannel, dataDestChannel);
 
-                    //use socket mapper to find the other socket that we need
-                    val dataDestChannel = addressMapper.getSocketChannel(key);
-                    if(dataDestChannel != null){
-                        println(dataDestChannel);
-                        val bytesTransferred = NetLibrary.transferDataFromChannels(dataSourceChannel, dataDestChannel);
+                            listener?.bytesTransfered(dataSourceChannel.remoteAddress as InetSocketAddress, dataSourceChannel.socket().localPort, bytesTransferred)
+                            if(bytesTransferred == -1){
+                                Logger.log("NetManager - Negative Bytes Transferred. Connection Assumed Closed. Cleaning Up");
 
-                        listener?.bytesTransfered(dataSourceChannel.remoteAddress as InetSocketAddress, dataSourceChannel.socket().localPort, bytesTransferred)
-                        if(bytesTransferred == -1){
-                            Logger.log("NetManager - Negative Bytes Transferred. Connection Assumed Closed. Cleaning Up");
+                                //Close Date Source Channel
+                                dataSourceChannel.close();
+                                //remove mappings so that they do no communicate with eachother
+                                addressMapper.deleteKeyForChannel(dataDestChannel);
+                                //cancel the key so it is removed from select
+                                key.cancel();
 
-                            //Close Date Source Channel
-                            dataSourceChannel.close();
-                            //remove mappings so that they do no communicate with eachother
-                            addressMapper.deleteKeyForChannel(dataDestChannel);
-                            //cancel the key so it is removed from select
-                            key.cancel();
+                                //Close the Data Dest Channel
+                                dataDestChannel.close();
+                                addressMapper.deleteKeyForChannel(dataSourceChannel);
+                                key.cancel();
 
-                            //Close the Data Dest Channel
-                            dataDestChannel.close();
-                            addressMapper.deleteKeyForChannel(dataSourceChannel);
-                            key.cancel();
-
-                            //tell statistics of closed socket
-                            this.listener?.connectionClosed();
-                            continue;
+                                //tell statistics of closed socket
+                                this.listener?.connectionClosed();
+                                continue;
+                            }
+                        }else{
+                            throw NullPointerException("The dataDestSocket Returned Null!");
                         }
+
+
+
+
+                    }else if(key.channel() is DatagramChannel){
+
+                        val dataSourceChannel = key.channel() as DatagramChannel;
+                        val dataSourceRemoteAddress = dataSourceChannel.remoteAddress;
+
+                        val dataDestChannel = addressMapper.getDatagramChannel(dataSourceRemoteAddress);
+                        if(dataDestChannel == null){
+
+                            //means the mapping doesn't exist. assumed a new connection ?
+                            val localPort = dataSourceChannel.socket().localPort;
+                            val addressPair = this.addressMapper.getPortMapping(localPort, "UDP");
+
+                            val dataDestChannel = NetLibrary.createUDPClientSocket(addressPair!!.dest);
+
+                            //if we fail to connect to the forwarding location, closeup shop for this channel
+                            if(dataDestChannel == null){
+                                Logger.log("NetManager - Unable To Connect To UDP Forwarding Server. Terminating Connection");
+
+                                //close the source socket
+                                dataSourceChannel.close();
+                                //cancel the source key
+                                key.cancel();
+
+                                Logger.log("NetManager - Cleanup Complete. We Are Still Running");
+                                continue;
+
+                            }else{
+
+                                //val dataDestLocalAddress = dataDestChannel.socket().localSocketAddress;
+                                //register with select
+                                val destKeys = this.select.registerChannel(dataDestChannel);
+
+                                //create mappings for future
+                                this.addressMapper.createDatagramMapping(dataSourceRemoteAddress, dataDestChannel);
+                                //this.addressMapper.createDatagramMapping(dataDestLocalAddress, dataSourceChannel);
+
+                            }
+
+                        }else{
+
+                            //means the mapping is know and this is a known connection
+
+
+
+                        }
+
+
+
+
                     }else{
-                        throw NullPointerException("The dataDestSocket Returned Null!");
+                        throw IllegalArgumentException("NetManager - No Matching Channel Type For Key's Channel");
                     }
+
+
 
                 }
 
