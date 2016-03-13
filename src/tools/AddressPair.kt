@@ -5,4 +5,4 @@ import java.net.InetSocketAddress
 /**
  * Created by Eric Tsang on 3/3/2016.
  */
-data class AddressPair(val localPort:Int,val dest:InetSocketAddress)
+data class AddressPair(val localPort:Int,val dest:InetSocketAddress, val type:String)

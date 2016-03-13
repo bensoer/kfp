@@ -23,7 +23,8 @@ class SQLitePersistanceAdaptor(val DBNAME:String):IPersistanceAdaptor{
         "(ID          INTEGER     PRIMARY KEY AUTOINCREMENT," +
         " LOCALPORT   TEXT        NOT NULL, " +
         " DESTIP      TEXT        NOT NULL, " +
-        " DESTPORT    INTEGER     NOT NULL)";
+        " DESTPORT    INTEGER     NOT NULL" +
+        " TYPE        TEXT        NOT NULL)";
 
 
     init {
@@ -80,9 +81,10 @@ class SQLitePersistanceAdaptor(val DBNAME:String):IPersistanceAdaptor{
             val localPort = results.getInt("LOCALPORT");
             val destIP = results.getString("DESTIP");
             val destPort = results.getInt("DESTPORT");
+            val type = results.getString("TYPE");
 
             val inetAddr = InetSocketAddress(destIP, destPort)
-            val addressPair = AddressPair(localPort = localPort, dest = inetAddr);
+            val addressPair = AddressPair(localPort = localPort, dest = inetAddr, type = type);
 
             collection.add(addressPair);
 
@@ -99,13 +101,14 @@ class SQLitePersistanceAdaptor(val DBNAME:String):IPersistanceAdaptor{
         this.connectToDatabase();
         val localPort = addressPair.localPort;
         val destination = addressPair.dest;
+        val type = addressPair.type;
 
         val statement = this.connection!!.createStatement();
 
         val sql =
                 "DELETE FROM ADDRESSPAIRS WHERE LOCALPORT = '" +
                         localPort + "' AND DESTIP = '" + destination.hostString +
-                        "'" + " AND DESTPORT = " + destination.port;
+                        "'" + " AND DESTPORT = " + destination.port + " AND TYPE = '" + type + "'";
         statement.executeUpdate(sql);
         statement.close();
         this.disconnectFromDatabase();
@@ -117,14 +120,16 @@ class SQLitePersistanceAdaptor(val DBNAME:String):IPersistanceAdaptor{
         this.connectToDatabase();
         val localPort = addressPair.localPort;
         val destination = addressPair.dest;
+        val type = addressPair.type;
 
         val statement = this.connection!!.createStatement();
         val sql =
-                "INSERT INTO ADDRESSPAIRS (LOCALPORT,DESTIP,DESTPORT) " +
+                "INSERT INTO ADDRESSPAIRS (LOCALPORT,DESTIP,DESTPORT,TYPE) " +
                 "VALUES (" +
                         "'" + localPort + "'," +
                         "'" + destination.hostString + "'," +
                         "'" + destination.port + "'" +
+                        "'" + type + "'" +
                         ");";
 
         statement.executeUpdate(sql);
