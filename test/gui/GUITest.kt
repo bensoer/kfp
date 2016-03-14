@@ -20,12 +20,12 @@ fun main(args: Array<String>)
     gui.listener = listener
 
     // add address pairs to GUI
-    gui.addressPairs.add(AddressPair(80,InetSocketAddress("localhost",800)))
-    gui.addressPairs.add(AddressPair(81,InetSocketAddress("localhost",800)))
-    gui.addressPairs.add(AddressPair(82,InetSocketAddress("localhost",800)))
-    gui.addressPairs.add(AddressPair(83,InetSocketAddress("localhost",800)))
-    gui.addressPairs.add(AddressPair(84,InetSocketAddress("localhost",800)))
-    gui.addressPairs.add(AddressPair(85,InetSocketAddress("localhost",800)))
+    gui.addressPairs.add(AddressPair(80,InetSocketAddress("localhost",800),"TCP"))
+    gui.addressPairs.add(AddressPair(81,InetSocketAddress("localhost",800),"TCP"))
+    gui.addressPairs.add(AddressPair(82,InetSocketAddress("localhost",800),"TCP"))
+    gui.addressPairs.add(AddressPair(83,InetSocketAddress("localhost",800),"TCP"))
+    gui.addressPairs.add(AddressPair(84,InetSocketAddress("localhost",800),"TCP"))
+    gui.addressPairs.add(AddressPair(85,InetSocketAddress("localhost",800),"TCP"))
 
     // remove all address pair after a bit...
     Thread.sleep(10000)
