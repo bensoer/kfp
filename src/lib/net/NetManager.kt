@@ -5,6 +5,7 @@ import com.sun.xml.internal.fastinfoset.util.StringArray
 import gui.GUI
 import javafx.collections.ObservableMap
 import lib.net.AddressMapper
+import lib.net.rw.ReadWriteableDatagramChannel
 import tools.AddressPair
 import tools.Logger
 import java.net.InetSocketAddress
@@ -13,6 +14,7 @@ import java.nio.channels.DatagramChannel
 import java.nio.channels.SelectionKey
 import java.nio.channels.ServerSocketChannel
 import java.nio.channels.SocketChannel
+import lib.net.rw.ReadWriteableSocketChannel
 
 /**
  * Created by bensoer on 04/03/16.
@@ -258,17 +260,17 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
 
                     //get the source socket - were gonna be balsy and cast
                     if(key.channel() is SocketChannel){
+                        Logger.log("NetManager - Data Is From A SocketChannel");
 
                         val dataSourceChannel = key.channel() as SocketChannel;
                         //use socket mapper to find the other socket that we need
                         val dataDestChannel = addressMapper.getSocketChannel(key);
                         if(dataDestChannel != null){
-                            println(dataDestChannel);
-                            val bytesTransferred = NetLibrary.transferDataFromChannels(dataSourceChannel, dataDestChannel);
+                            val bytesTransferred = NetLibrary.transferDataFromChannels(ReadWriteableSocketChannel(dataSourceChannel), ReadWriteableSocketChannel(dataDestChannel));
 
                             listener?.bytesTransfered(dataSourceChannel.remoteAddress as InetSocketAddress, dataSourceChannel.socket().localPort, bytesTransferred)
                             if(bytesTransferred == -1){
-                                Logger.log("NetManager - Negative Bytes Transferred. Connection Assumed Closed. Cleaning Up");
+                                Logger.log("NetManager - Negative TCP Bytes Transferred. Connection Assumed Closed. Cleaning Up");
 
                                 //Close Date Source Channel
                                 dataSourceChannel.close();
@@ -294,11 +296,18 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
 
 
                     }else if(key.channel() is DatagramChannel){
+                        Logger.log("NetManager - Data Is From A DatagramChannel");
 
                         val dataSourceChannel = key.channel() as DatagramChannel;
                         val dataSourceRemoteAddress = dataSourceChannel.remoteAddress;
 
-                        val dataDestChannel = addressMapper.getDatagramChannel(dataSourceRemoteAddress);
+                        //we gotta check whether a mapping exists in a couple places
+                        var dataDestChannel = addressMapper.getDatagramChannel(dataSourceRemoteAddress);
+                        if(dataDestChannel == null){
+                            dataDestChannel = addressMapper.getUDPMapping(dataSourceChannel);
+                        }
+
+                        //if there is still no mapping. then this must be new
                         if(dataDestChannel == null){
 
                             //means the mapping doesn't exist. assumed a new connection ?
@@ -325,18 +334,36 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                                 //register with select
                                 val destKeys = this.select.registerChannel(dataDestChannel);
 
-                                //TODO: HOW MAP DO ?
                                 //create mappings for future
                                 this.addressMapper.createDatagramMapping(dataSourceRemoteAddress, dataDestChannel);
+
+                                this.addressMapper.createUDPMapping(dataDestChannel,dataSourceChannel);
                                 //this.addressMapper.createDatagramMapping(dataDestLocalAddress, dataSourceChannel);
 
+                                this.listener?.connectionOpened();
                             }
 
                         }else{
 
                             //means the mapping is known and this is a known connection
 
+                            val bytesTransfered = NetLibrary.transferDataFromChannels(ReadWriteableDatagramChannel(dataSourceChannel), ReadWriteableDatagramChannel(dataDestChannel));
+                            listener?.bytesTransfered(dataSourceChannel.remoteAddress as InetSocketAddress, dataSourceChannel.socket().localPort, bytesTransfered);
+                            if(bytesTransfered == -1){
+                                Logger.log("NetManager - Negative UDP Bytes Transferred. Connection Assumed Closed. Cleaning Up");
+                                //transfer is done, disconnect
 
+                                //close the source channel
+                                this.addressMapper.deleteUDPMappings(dataSourceChannel);
+                                dataSourceChannel.close();
+                                key.cancel();
+
+                                //close the destination channel
+                                this.addressMapper.deleteUDPMappings(dataDestChannel);
+                                dataDestChannel.close();
+
+                                this.listener?.connectionClosed();
+                            }
 
                         }
 

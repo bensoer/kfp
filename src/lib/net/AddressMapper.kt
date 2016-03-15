@@ -22,6 +22,8 @@ class AddressMapper(private val dataStore: IPersistanceAdaptor){
     private var datagramMappings: HashMap<SocketAddress, DatagramChannel> = HashMap();
     private var inverseDatagramMappings: HashMap<DatagramChannel, SocketAddress> = HashMap();
 
+    private var udpMapping: HashMap<DatagramChannel,DatagramChannel> = HashMap();
+
     init {
         //this.portMappings = dataStore.loadAll()
     }
@@ -69,6 +71,28 @@ class AddressMapper(private val dataStore: IPersistanceAdaptor){
         this.inverseDatagramMappings.put(channel, key);
     }
 
+    fun createUDPMapping(src: DatagramChannel, dest: DatagramChannel){
+        this.udpMapping.put(src, dest);
+    }
+
+    fun getUDPMapping(channel: DatagramChannel): DatagramChannel?{
+        return this.udpMapping[channel];
+    }
+
+    fun deleteUDPMappings(channel: DatagramChannel){
+
+        this.udpMapping.remove(channel);
+
+        val socketAddress = this.inverseDatagramMappings[channel];
+        if(socketAddress != null){
+
+            this.inverseDatagramMappings.remove(channel);
+            this.datagramMappings.remove(socketAddress);
+
+        }
+
+    }
+
     fun getSocketChannel(key: SelectionKey): SocketChannel?{
         return this.socketMappings[key];
     }
@@ -80,6 +104,10 @@ class AddressMapper(private val dataStore: IPersistanceAdaptor){
     fun clearAllSocketMappings(){
         this.socketMappings.clear();
         this.inverseSocketMappings.clear();
+
+        this.datagramMappings.clear();
+        this.inverseDatagramMappings.clear();
+        this.udpMapping.clear();
     }
 
 }

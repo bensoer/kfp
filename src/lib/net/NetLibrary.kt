@@ -1,5 +1,6 @@
 package lib.net
 
+import lib.net.rw.IReadWritableChannel
 import tools.Logger
 import java.io.IOException
 import java.net.*
@@ -182,7 +183,7 @@ class NetLibrary{
          * channel readFromSocket will return a SocketRead data object containing the ByteBuffer in read mode, and
          * the number of bytes that were read from the channel
          */
-        fun readFromSocket(channel: SocketChannel, buffer: ByteBuffer): SocketRead{
+        fun readFromSocket(channel: IReadWritableChannel, buffer: ByteBuffer): SocketRead{
 
             //read in all to fill up the buffer ?
             val bytesRead:Int = channel.read(buffer);
@@ -205,7 +206,7 @@ class NetLibrary{
          * The method will block until all data in the buffer has been written. Note this method assumes the passed
          * in ByteBuffer is in read mode
          */
-        fun writeToSocket(channel: SocketChannel, buffer: ByteBuffer){
+        fun writeToSocket(channel: IReadWritableChannel, buffer: ByteBuffer){
 
             //buffer.flip();
             while(buffer.hasRemaining()){
@@ -219,7 +220,7 @@ class NetLibrary{
          * it will read from the sourceChannel until empty or the ByteBuffer is full and then write it all to the
          * destinationChannel. This will only happen once ina  single call to the transferDataFromChannels method
          */
-        fun transferDataFromChannels(sourceChannel: SocketChannel, destinationChannel: SocketChannel):Int{
+        fun transferDataFromChannels(sourceChannel: IReadWritableChannel, destinationChannel: IReadWritableChannel):Int{
             Logger.log("NetLibrary - Transfering Data From Channels")
 
             var buffer:ByteBuffer = ByteBuffer.allocate(1024);
