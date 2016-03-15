@@ -1,10 +1,12 @@
 package gui
 
+import com.sun.javafx.collections.ObservableListWrapper
 import com.sun.javafx.collections.ObservableSetWrapper
 import javafx.application.Platform
 import javafx.beans.InvalidationListener
 import javafx.collections.SetChangeListener
 import javafx.geometry.Insets
+import javafx.scene.control.ComboBox
 import javafx.scene.control.Label
 import javafx.scene.control.TextField
 import javafx.scene.layout.*
@@ -12,16 +14,16 @@ import lib.net.NetLibrary
 import tools.AddressPair
 import java.net.InetSocketAddress
 import java.util.*
-import kotlin.concurrent.thread
 
 class ForwardingPane:GridPane()
 {
 
     private val COL_INDEX_LOCAL_PORT:Int = 1
-    private val COL_INDEX_SEPARATOR:Int = 2
-    private val COL_INDEX_DST_ADDR:Int = 3
-    private val COL_INDEX_COLON:Int = 4
-    private val COL_INDEX_DST_PORT:Int = 5
+    private val COL_INDEX_PROTOCOL:Int = 2
+    private val COL_INDEX_SEPARATOR:Int = 3
+    private val COL_INDEX_DST_ADDR:Int = 4
+    private val COL_INDEX_COLON:Int = 5
+    private val COL_INDEX_DST_PORT:Int = 6
 
     private val COLON_LABEL_TEXT:String = ":";
     private val SEPARATOR_TEXT:String = "->"
@@ -48,6 +50,7 @@ class ForwardingPane:GridPane()
         columnConstraints.add(ColumnConstraints())
         columnConstraints.add(ColumnConstraints())
         columnConstraints.add(ColumnConstraints())
+        columnConstraints.add(ColumnConstraints())
 
         val lastColumn = ColumnConstraints()
         lastColumn.isFillWidth = true
@@ -65,6 +68,7 @@ class ForwardingPane:GridPane()
     {
         // add nodes to layout
         add(forwardingEntry.localPortTextField,COL_INDEX_LOCAL_PORT,forwardingEntries.size)
+        add(forwardingEntry.protocolComboBox,COL_INDEX_PROTOCOL,forwardingEntries.size)
         add(Label(SEPARATOR_TEXT),COL_INDEX_SEPARATOR,forwardingEntries.size)
         add(forwardingEntry.dstAddrTextField,COL_INDEX_DST_ADDR,forwardingEntries.size)
         add(Label(COLON_LABEL_TEXT),COL_INDEX_COLON,forwardingEntries.size)
@@ -105,12 +109,13 @@ class ForwardingPane:GridPane()
                     lastForwardingEntry.dstAddrTextField.text = change.elementAdded.dest.hostName
                     lastForwardingEntry.dstPortTextField.text = change.elementAdded.dest.port.toString()
                     lastForwardingEntry.localPortTextField.text = change.elementAdded.localPort.toString()
+                    lastForwardingEntry.protocolComboBox.value = change.elementAdded.type
                     add(ForwardingEntry())
                 }
                 else
                 {
                     val forwardingEntry = forwardingEntries
-                        .find {it.localPort == change.elementRemoved.localPort && it.dstSockAddr == change.elementRemoved.dest}
+                        .find {it.localPort == change.elementRemoved.localPort && it.dstSockAddr == change.elementRemoved.dest && it.protocol == change.elementRemoved.type}
                     if (forwardingEntry != null) remove(forwardingEntry)
                 }
             }
@@ -135,7 +140,8 @@ class ForwardingPane:GridPane()
                 // if the last forwarding entry is not empty, add a new one
                 if (forwardingEntries.last().dstPortTextField.text.isNotBlank() ||
                     forwardingEntries.last().dstAddrTextField.text.isNotBlank() ||
-                    forwardingEntries.last().localPortTextField.text.isNotBlank())
+                    forwardingEntries.last().localPortTextField.text.isNotBlank() ||
+                    forwardingEntries.last().protocol != null)
                 {
                     add(ForwardingEntry())
                 }
@@ -159,8 +165,8 @@ class ForwardingPane:GridPane()
 
                 // sync up the addressPairs map: resolve current address pairs
                 val allAddressPairs = forwardingEntries
-                    .filter {it.error.localPort == false && it.error.dstSockAddr == false}
-                    .map {AddressPair(it.localPort!!.toInt(),it.dstSockAddr!!)}
+                    .filter {it.error.localPort == false && it.error.dstSockAddr == false && it.error.protocol == false}
+                    .map {AddressPair(it.localPort!!.toInt(),it.dstSockAddr!!,it.protocol!!)}
 
                 // sync up the addressPairs map: remove old entries
                 val toRemove = _addressPairs.filter {it !in allAddressPairs}
@@ -186,6 +192,13 @@ private class ForwardingEntry()
         private const val LOCAL_PORT_PROMPT = "Local Port"
         private const val DST_ADDR_PROMPT = "IP Address"
         private const val DST_PORT_PROMPT = "Port Number"
+        private const val PROTOCOL_PROMPT = "Protocol"
+
+        /**
+         * test used as values in [protocolComboBox].
+         */
+        private const val PROTOCOL_TCP = "TCP"
+        private const val PROTOCOL_UDP = "UDP"
 
         /**
          * milliseconds to delay
@@ -193,9 +206,20 @@ private class ForwardingEntry()
         private const val VALIDATION_DELAY_MILLIS = 1000L
     }
 
+    /**
+     * user-specified local port to redirect traffic from.
+     */
     var localPort:Int? = null
 
+    /**
+     * user-specified address to forward traffic to.
+     */
     var dstSockAddr:InetSocketAddress? = null
+
+    /**
+     * user-specified traffic type to forward.
+     */
+    var protocol:String? = null
 
     /**
      * [TextField] for the local port on this host that remote hosts will
@@ -215,25 +239,28 @@ private class ForwardingEntry()
      */
     val dstPortTextField = IntTextField(true)
 
-    var error:ErrorDetails = ErrorDetails(false,false)
+    /**
+     * [ComboBox] with a list of valid protocols that the user may select from
+     * to choose to forward.
+     */
+    val protocolComboBox = ComboBox(ObservableListWrapper(listOf(PROTOCOL_TCP,PROTOCOL_UDP)))
 
+    var error:ErrorDetails = ErrorDetails(false,false,false)
+
+        /**
+         * styles UI controls based on error flags.
+         */
         set(value)
         {
             assert(Platform.isFxApplicationThread())
+
             if (value.localPort != field.localPort)
-            {
                 if (value.localPort)
-                {
                     localPortTextField.styleClass.add(CSS.WARNING_CONTROL)
-                }
                 else
-                {
                     localPortTextField.styleClass.remove(CSS.WARNING_CONTROL)
-                }
-            }
 
             if (value.dstSockAddr != field.dstSockAddr)
-            {
                 if (value.dstSockAddr)
                 {
                     dstAddrTextField.styleClass.add(CSS.WARNING_CONTROL)
@@ -244,11 +271,17 @@ private class ForwardingEntry()
                     dstAddrTextField.styleClass.remove(CSS.WARNING_CONTROL)
                     dstPortTextField.styleClass.remove(CSS.WARNING_CONTROL)
                 }
-            }
+
+            if (value.protocol != field.protocol)
+                if (value.protocol)
+                    protocolComboBox.styleClass.add(CSS.WARNING_CONTROL)
+                else
+                    protocolComboBox.styleClass.remove(CSS.WARNING_CONTROL)
+
             field = value
         }
 
-    data class ErrorDetails(val localPort:Boolean,val dstSockAddr:Boolean)
+    data class ErrorDetails(val localPort:Boolean,val dstSockAddr:Boolean,val protocol:Boolean)
 
     var stateObserver:ForwardingEntry.Observer? = null
 
@@ -259,17 +292,19 @@ private class ForwardingEntry()
     init
     {
         // reassign instance variables to run their setters
-        error = ErrorDetails(true,true)
+        error = ErrorDetails(true,true,true)
 
         // set on action code
         localPortTextField.textProperty().addListener(InvalidationListener{validateAndNotify()})
         dstAddrTextField.textProperty().addListener(InvalidationListener{validateAndNotify()})
         dstPortTextField.textProperty().addListener(InvalidationListener{validateAndNotify()})
+        protocolComboBox.valueProperty().addListener(InvalidationListener{validateAndNotify()})
 
         // add prompt text to text fields
         localPortTextField.promptText = LOCAL_PORT_PROMPT
         dstAddrTextField.promptText = DST_ADDR_PROMPT
         dstPortTextField.promptText = DST_PORT_PROMPT
+        protocolComboBox.promptText = PROTOCOL_PROMPT
 
         // configure mins and maxs of port text fields
         localPortTextField.min = NetLibrary.MIN_PORT
@@ -278,7 +313,7 @@ private class ForwardingEntry()
         dstPortTextField.max = NetLibrary.MAX_PORT
     }
 
-    private fun validateAndNotify() = synchronized(this)
+    private fun validateAndNotify():Unit = synchronized(this)
     {
         validateInputTask?.cancel()
         validateInputTask = ValidateInputTask()
@@ -315,6 +350,7 @@ private class ForwardingEntry()
         {
             // try to resolve addresses
             localPort = try {localPortTextField.text.toInt()} catch(ex:Exception) {null}
+            protocol = protocolComboBox.value
             dstSockAddr = validateAddress(dstAddrTextField.text,dstPortTextField.text)
 
             // update the error feedback on the GUI
@@ -326,14 +362,15 @@ private class ForwardingEntry()
                 error = error.copy(dstSockAddr = true)
             else
                 error = error.copy(dstSockAddr = false)
+            if (protocol == null)
+                error = error.copy(protocol = true)
+            else
+                error = error.copy(protocol = false)
 
             // set instance variable sock addresses
-            if (!Thread.interrupted())
+            Platform.runLater()
             {
-                Platform.runLater()
-                {
-                    stateObserver?.onDataChanged(this@ForwardingEntry)
-                }
+                stateObserver?.onDataChanged(this@ForwardingEntry)
             }
         }
     }
