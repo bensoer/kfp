@@ -31,6 +31,8 @@ class NetLibrary{
          */
         val MAX_PORT:Int = 0xFFFF
 
+
+        private var UDP_BIND_PORT = 6000;
         /**
          * createClientSocket creates a SocketChannel from the passed in hostNAme and portNumber parameters.
          * After which it then attempts with this channel to connect to the host passed. If the connection
@@ -96,6 +98,9 @@ class NetLibrary{
 
             try{
                 val channel: DatagramChannel = DatagramChannel.open()
+                channel.socket().bind(InetSocketAddress(UDP_BIND_PORT));
+                UDP_BIND_PORT--;
+
                 channel.connect(address);
 
                 while(!channel.isConnected){
@@ -198,7 +203,7 @@ class NetLibrary{
             buffer.clear();
             return string;*/
 
-            return SocketRead(buffer, bytesRead);
+            return SocketRead(buffer, bytesRead, channel.getSourceAddress());
         }
 
         /**

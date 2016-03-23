@@ -1,5 +1,6 @@
 package lib.net.rw
 
+import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 
 /**
@@ -11,4 +12,8 @@ interface IReadWritableChannel{
     fun read(buffer: ByteBuffer):Int;
 
     fun write(buffer:ByteBuffer);
+
+    fun isDatagram(): Boolean;
+
+    fun getSourceAddress(): InetSocketAddress?;
 }

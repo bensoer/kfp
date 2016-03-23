@@ -15,6 +15,7 @@ import java.nio.channels.SelectionKey
 import java.nio.channels.ServerSocketChannel
 import java.nio.channels.SocketChannel
 import lib.net.rw.ReadWriteableSocketChannel
+import java.nio.ByteBuffer
 
 /**
  * Created by bensoer on 04/03/16.
@@ -299,11 +300,25 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                         Logger.log("NetManager - Data Is From A DatagramChannel");
 
                         val dataSourceChannel = key.channel() as DatagramChannel;
-                        val dataSourceRemoteAddress = dataSourceChannel.remoteAddress;
+                        val rwDataSourceChannel = ReadWriteableDatagramChannel(dataSourceChannel);
+
+                        val socketRead = NetLibrary.readFromSocket(rwDataSourceChannel, ByteBuffer.allocate(2048));
+                        println("Read from socket");
+                        println(socketRead);
+                        println(socketRead.data);
+                        //socketRead.data.flip();
+                        //println(dataSourceChannel);
+                        //println(dataSourceChannel.remoteAddress);
+                        //println(dataSourceChannel.socket().localAddress);
+                        val dataSourceRemoteAddress = socketRead.sourceAddress;
+
+
 
                         //we gotta check whether a mapping exists in a couple places
-                        var dataDestChannel = addressMapper.getDatagramChannel(dataSourceRemoteAddress);
+                        //is this mapping going from C -> PF -> S ?
+                        var dataDestChannel:DatagramChannel? = addressMapper.getDatagramChannel(dataSourceRemoteAddress!!);
                         if(dataDestChannel == null){
+                            //or is this a mapping going from S -> PF -> C ?
                             dataDestChannel = addressMapper.getUDPMapping(dataSourceChannel);
                         }
 
@@ -311,6 +326,10 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                         if(dataDestChannel == null){
 
                             //means the mapping doesn't exist. assumed a new connection ?
+
+                            //connect it back to the host so we can auto respond properly
+                            dataSourceChannel.connect(dataSourceRemoteAddress);
+
                             val localPort = dataSourceChannel.socket().localPort;
                             val addressPair = this.addressMapper.getPortMapping(localPort, "UDP");
 
@@ -333,21 +352,51 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                                 //val dataDestLocalAddress = dataDestChannel.socket().localSocketAddress;
                                 //register with select
                                 val destKeys = this.select.registerChannel(dataDestChannel);
+                                println("Done registering");
 
                                 //create mappings for future
                                 this.addressMapper.createDatagramMapping(dataSourceRemoteAddress, dataDestChannel);
+                                println("Created MApping 1");
 
                                 this.addressMapper.createUDPMapping(dataDestChannel,dataSourceChannel);
+                                println("Created Mapping 2");
                                 //this.addressMapper.createDatagramMapping(dataDestLocalAddress, dataSourceChannel);
 
                                 this.listener?.connectionOpened();
+                                println("Attempted to Call Event");
+
+                                //because this is a new UDP channel, its stateless and thus this packet has data to
+                                //be transfered aswell. forward this packet along
+                                NetLibrary.writeToSocket(ReadWriteableDatagramChannel(dataDestChannel), socketRead.data);
+                                val bytesTransfered = socketRead.bytesRead;
+                                listener?.bytesTransfered(dataSourceChannel.remoteAddress as InetSocketAddress, dataSourceChannel.socket().localPort, bytesTransfered);
+                                if(bytesTransfered == -1){
+                                    Logger.log("NetManager - Negative UDP Bytes Transferred. Connection Assumed Closed. Cleaning Up");
+                                    //transfer is done, disconnect
+
+                                    //close the source channel
+                                    this.addressMapper.deleteUDPMappings(dataSourceChannel);
+                                    dataSourceChannel.close();
+                                    key.cancel();
+
+                                    //close the destination channel
+                                    this.addressMapper.deleteUDPMappings(dataDestChannel);
+                                    dataDestChannel.close();
+
+                                    this.listener?.connectionClosed();
+                                }
+
+                                println(" --- completed writing out data --- ");
                             }
 
                         }else{
 
                             //means the mapping is known and this is a known connection
 
-                            val bytesTransfered = NetLibrary.transferDataFromChannels(ReadWriteableDatagramChannel(dataSourceChannel), ReadWriteableDatagramChannel(dataDestChannel));
+                            //val bytesTransfered = NetLibrary.transferDataFromChannels(ReadWriteableDatagramChannel(dataSourceChannel), ReadWriteableDatagramChannel(dataDestChannel));
+
+                            NetLibrary.writeToSocket(ReadWriteableDatagramChannel(dataDestChannel), socketRead.data);
+                            val bytesTransfered = socketRead.bytesRead;
                             listener?.bytesTransfered(dataSourceChannel.remoteAddress as InetSocketAddress, dataSourceChannel.socket().localPort, bytesTransfered);
                             if(bytesTransfered == -1){
                                 Logger.log("NetManager - Negative UDP Bytes Transferred. Connection Assumed Closed. Cleaning Up");

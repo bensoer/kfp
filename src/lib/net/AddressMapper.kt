@@ -75,6 +75,7 @@ class AddressMapper(private val dataStore: IPersistanceAdaptor){
         this.udpMapping.put(src, dest);
     }
 
+    //for C -> PF -> S Mapping
     fun getUDPMapping(channel: DatagramChannel): DatagramChannel?{
         return this.udpMapping[channel];
     }
