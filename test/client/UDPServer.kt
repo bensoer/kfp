@@ -23,7 +23,11 @@ fun main(args:Array<String>){
 
     println("Got Response");
     val data = responseDGramPacket.data;
-    println(data.toString());
+    val newString:String = String(data);
+
+    println(newString);
+
+
 
     println("Now Sending Message");
     val srcAddress = socket.remoteSocketAddress;

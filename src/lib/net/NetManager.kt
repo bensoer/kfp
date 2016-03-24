@@ -304,15 +304,8 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
 
                         val socketRead = NetLibrary.readFromSocket(rwDataSourceChannel, ByteBuffer.allocate(2048));
                         println("Read from socket");
-                        println(socketRead);
-                        println(socketRead.data);
-                        //socketRead.data.flip();
-                        //println(dataSourceChannel);
-                        //println(dataSourceChannel.remoteAddress);
-                        //println(dataSourceChannel.socket().localAddress);
+
                         val dataSourceRemoteAddress = socketRead.sourceAddress;
-
-
 
                         //we gotta check whether a mapping exists in a couple places
                         //is this mapping going from C -> PF -> S ?

@@ -1,6 +1,7 @@
 package lib.net.rw
 
 import lib.net.rw.IReadWritableChannel
+import java.net.DatagramPacket
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.DatagramChannel
@@ -14,7 +15,9 @@ class ReadWriteableDatagramChannel(private val datagramChannel: DatagramChannel)
     private var socketAddress:InetSocketAddress? = null;
 
     override fun read(buffer: ByteBuffer):Int {
+
         this.socketAddress = datagramChannel.receive(buffer) as InetSocketAddress;
+
         return buffer.position();
     }
 
