@@ -64,7 +64,7 @@ class Select {
      * registerServerChannel registers a ServerSocketChannel with the Select object so that it is included in the
      * check loop for events on its socket. The channel is registered to listen for ACCEPT events.
      */
-    fun registerServerChannel(channel: ServerSocketChannel) : SelectionKey{
+    fun registerServerChannel(channel: AbstractSelectableChannel) : SelectionKey{
         //ensuring that there is no overlap in this process
         this.registerServerLock.lock();
 

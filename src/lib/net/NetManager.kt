@@ -43,17 +43,38 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
 
     fun addMapping(addressPair:AddressPair):Boolean{
 
-        val serverSocketChannel = NetLibrary.createServerSocket(addressPair.localPort);
-        if(serverSocketChannel == null){
-            Logger.log("NetManager - ERROR - Failed To Create A Server Socket For New Port");
-            return false;
+        if(addressPair.type.equals("UDP")){
+
+
+            val serverSocketChannel = NetLibrary.createUDPServerSocket(addressPair.localPort);
+            if(serverSocketChannel == null){
+                Logger.log("NetManager - ERROR - Failed To Create A UDP Server Socket For New Port");
+                return false;
+            }else{
+                this.addressMapper.addPortMapping(addressPair);
+                this.select.registerServerChannel(serverSocketChannel);
+                Logger.log("NetManager - UDP Port Mapping Add Complete");
+                return true;
+            }
+
+        }else if(addressPair.type.equals("TCP")){
+
+            val serverSocketChannel = NetLibrary.createServerSocket(addressPair.localPort);
+            if(serverSocketChannel == null){
+                Logger.log("NetManager - ERROR - Failed To Create A Server Socket For New Port");
+                return false;
+            }else{
+                this.addressMapper.addPortMapping(addressPair);
+                this.select.registerServerChannel(serverSocketChannel);
+                Logger.log("NetManager - TCP Port Mapping Add Complete");
+                return true;
+            }
+
         }else{
-            this.addressMapper.addPortMapping(addressPair);
-            this.select.registerServerChannel(serverSocketChannel);
-            Logger.log("NetManager - Mapping Added Complete");
-            return true;
+            Logger.log("NetManager - Requested Mapping Does Not Use An Accepted Protocol Type. Can't Create Mapping");
+            return false;
         }
-        Logger.log("why am i here");
+
     }
 
     fun removeMapping(addressPair:AddressPair):Boolean{
@@ -69,8 +90,6 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                 val channel = this.select.getChannelForKey(key) as ServerSocketChannel;
                 val listeningPort = channel.socket().localPort
 
-                println("Listening Port: $listeningPort");
-
                 //if this ServerSocket is listening on the same port then we know to delete it
                 if(listeningPort == addressPair.localPort){
 
@@ -82,6 +101,22 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                     //iterator.remove();
 
                     //remove from database
+                    this.addressMapper.deletePortMapping(addressPair);
+
+                    return true;
+                }
+            }else if(this.select.getChannelForKey(key) is DatagramChannel){
+                val channel = this.select.getChannelForKey(key) as DatagramChannel;
+                val listeningPort = channel.socket().localPort;
+
+                //if this DatagramSocket is listening on the same port then we know to delete it
+                if(listeningPort == addressPair.localPort){
+                    //close the channel
+                    channel.close();
+                    //cancel the key
+                    key.cancel();
+
+                    //remove port mapping from database
                     this.addressMapper.deletePortMapping(addressPair);
 
                     return true;
@@ -107,9 +142,18 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
         while(iterator.hasNext()){
             val key = iterator.next();
 
-            //close all sockets
-            val channel = this.addressMapper.getSocketChannel(key);
-            channel?.close();
+            if(key.channel() is SocketChannel){
+                val channel = key.channel() as SocketChannel;
+                channel.close();
+
+            }else if(key.channel() is DatagramChannel){
+                val channel = key.channel() as DatagramChannel;
+                channel.close();
+            }else{
+                Logger.log("NetManager - ERROR - An Invalid Channel Was Detected During Termination. Unable To" +
+                        " Properly Close It.");
+            }
+
 
             //cancel all keys
             key.cancel();
