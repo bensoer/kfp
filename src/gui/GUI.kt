@@ -174,7 +174,7 @@ class GUI:Application()
         fun exit()
     }
 
-    private val forwardingPaneListener = object:ForwardingPane.Listener
+    private val forwardingPaneListener = object:ForwardingPane.IListener
     {
         override fun added(addressPair:AddressPair)
         {
