@@ -22,11 +22,12 @@ For the next steps it is assumed that both the commands `kotlinc` and `java` can
 both be called from any location on the terminal
 
 To setup 8005-fp-portforwarder do the following:
-1. Clone the Project / Download the Project
-2. `cd` into the `src` folder
-3. call `kotlinc main.Application.kt -include-runtime -d PortForwarder.jar`
-4. call `java -jar PortForwarder.jar`
-5. The program should begin initializing
+
+ 1. Clone the Project / Download the Project
+ 2. `cd` into the `src` folder
+ 3. call `kotlinc main.Application.kt -include-runtime -d PortForwarder.jar`
+ 4. call `java -jar PortForwarder.jar`
+ 5. The program should begin initializing
 
 # Usage
 
@@ -35,11 +36,11 @@ activities are carried out on the GUI.
 
 ## Add An Entry
 To add a port forwarding entry simply enter in the entry list:
-1. the port to listen on, followed by
-2. the protocol to be used (either TCP or UDP) 
-3. the destination host and port that the port forwarder will forward 
-all of its traffic to. 
-4. wait for the text entries to turn white
+
+ 1. the port to listen on, followed by
+ 2. the protocol to be used (either TCP or UDP) 
+ 3. the destination host and port that the port forwarder will forward all of its traffic to. 
+ 4. wait for the text entries to turn white
 
 ## Remove An Entry
 To remove a forwarding entry simply delete it from the list or make it
