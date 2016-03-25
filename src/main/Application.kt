@@ -24,9 +24,6 @@ fun main(args: Array<String>){
     val addressMapper = AddressMapper(storage);
     val netManager = NetManager(addressMapper);
 
-
-
-
     val guiEventHandler = GUIEventHandler(netManager);
 
     //setup the GUI
@@ -37,7 +34,6 @@ fun main(args: Array<String>){
     netManager.listener = netManagerEventHandler;
 
     gui.addressPairs.addAll(storage.loadAll());
-
 
     // adds a listener to GUI so we will be notified when user interacts with it
     gui.listener = guiEventHandler;
@@ -52,17 +48,18 @@ private class GUIEventHandler(val netManager: NetManager): GUI.IListener{
 
     override fun insert(addressPair: AddressPair):Boolean
     {
-        Logger.log("Inserting");
+        Logger.log("GUIEventHandler - Inserting");
         return this.netManager.addMapping(addressPair);
     }
 
     override fun delete(addressPair: AddressPair):Boolean
     {
-        Logger.log("Deleting");
+        Logger.log("GUIEventHandler - Deleting");
         return this.netManager.removeMapping(addressPair);
     }
 
     override fun exit(){
+        Logger.log("GUIEventHandler - Closing");
         this.netManager.terminate();
     }
 
