@@ -74,7 +74,9 @@ class GUI:Application()
 
         // configure the scene (inside the window)
         val borderPane = BorderPane()
-        primaryStage.scene = Scene(borderPane,900.0,480.0)
+        primaryStage.scene = Scene(borderPane,1024.0,480.0)
+        primaryStage.minWidth = 1024.0
+        primaryStage.minHeight = 480.0
         primaryStage.scene.stylesheets.add(CSS.FILE_PATH)
 
         borderPane.center = ScrollPane(forwardingPane)
