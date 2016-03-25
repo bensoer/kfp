@@ -52,7 +52,7 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                 return false;
             }else{
                 this.addressMapper.addPortMapping(addressPair);
-                //this.select.registerServerChannel(serverSocketChannel);
+                this.select.registerChannel(serverSocketChannel);
                 Logger.log("NetManager - UDP Port Mapping Add Complete");
                 return true;
             }
@@ -84,14 +84,14 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
         while(iterator.hasNext()){
             val key = iterator.next();
 
-            println("Number of Keys: ${keysSet.size}");
-
             if(this.select.getChannelForKey(key) is ServerSocketChannel){
+                Logger.log("NetManager:removeMapping - Found ServerSocketChannel to Remove");
                 val channel = this.select.getChannelForKey(key) as ServerSocketChannel;
                 val listeningPort = channel.socket().localPort
 
                 //if this ServerSocket is listening on the same port then we know to delete it
                 if(listeningPort == addressPair.localPort){
+                    Logger.log("NetManager:removeMapping - Found Matching Local Ports");
 
                     //close the channel
                     channel.close();
@@ -106,11 +106,13 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                     return true;
                 }
             }else if(this.select.getChannelForKey(key) is DatagramChannel){
+                Logger.log("NetManager:removeMapping - Found DatagramChannel to Remove");
                 val channel = this.select.getChannelForKey(key) as DatagramChannel;
                 val listeningPort = channel.socket().localPort;
 
                 //if this DatagramSocket is listening on the same port then we know to delete it
                 if(listeningPort == addressPair.localPort){
+                    Logger.log("NetManager:removeMapping - Found Matching Local Ports");
                     //close the channel
                     channel.close();
                     //cancel the key
