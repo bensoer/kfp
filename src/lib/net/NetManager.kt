@@ -52,7 +52,7 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                 return false;
             }else{
                 this.addressMapper.addPortMapping(addressPair);
-                this.select.registerServerChannel(serverSocketChannel);
+                //this.select.registerServerChannel(serverSocketChannel);
                 Logger.log("NetManager - UDP Port Mapping Add Complete");
                 return true;
             }
@@ -252,16 +252,11 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                     val serverSocketSession = serverSocketChannel.accept();
                     if(serverSocketSession == null){
                         Logger.log("NetManager - Nothing To Accept From the Connection")
+                        keyIterator.remove();
                         continue;
                     }
                     Logger.log("NetManager - Connection Accepted");
-                    //serverSocketChannel.configureBlocking(false);
 
-
-                    Logger.log("NetManager - Registering The Channel");
-                    //register this new socket
-                    //val srcKeys = this.select.registerChannel(serverSocketSession);
-                    val srcKeys = this.select.registerChannel(serverSocketSession);
 
                     Logger.log("NetManager - Getting Location To The Forwarding Location From Local Port");
                     //lookup where this is supposed to go
@@ -276,8 +271,8 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
 
                         //close the socket
                         serverSocketSession.close();
-                        //cancel the keys
-                        srcKeys.cancel();
+
+                        keyIterator.remove();
 
                         Logger.log("NetManager - Cleanup Complete. We Are Still Running");
                         continue;
@@ -285,8 +280,12 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                     //else the complete connection is successful. Register everything for flows
                     }else{
 
+                        Logger.log("NetManager - Registering The Channel");
+                        //register this new socket
+                        val srcKeys = this.select.registerChannel(serverSocketSession);
+
                         //register socket with select
-                        val destKeys = this.select.registerChannel(clientSocketChannel!!);
+                        val destKeys = this.select.registerChannel(clientSocketChannel);
 
                         Logger.log("NetManager - Generating Hashing Maps To Each Socket");
                         //hash the keys to eachothers sockets
@@ -329,6 +328,8 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                                 addressMapper.deleteKeyForChannel(dataSourceChannel);
                                 key.cancel();
 
+                                keyIterator.remove();
+
                                 //tell statistics of closed socket
                                 this.listener?.connectionClosed();
                                 continue;
@@ -347,7 +348,6 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                         val rwDataSourceChannel = ReadWriteableDatagramChannel(dataSourceChannel);
 
                         val socketRead = NetLibrary.readFromSocket(rwDataSourceChannel, ByteBuffer.allocate(2048));
-                        println("Read from socket");
 
                         val dataSourceRemoteAddress = socketRead.sourceAddress;
 
@@ -370,7 +370,7 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                             val localPort = dataSourceChannel.socket().localPort;
                             val addressPair = this.addressMapper.getPortMapping(localPort, "UDP");
 
-                            val dataDestChannel = NetLibrary.createUDPClientSocket(addressPair!!.dest);
+                            dataDestChannel = NetLibrary.createUDPClientSocket(addressPair!!.dest);
 
                             //if we fail to connect to the forwarding location, closeup shop for this channel
                             if(dataDestChannel == null){
@@ -381,6 +381,8 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                                 //cancel the source key
                                 key.cancel();
 
+                                keyIterator.remove();
+
                                 Logger.log("NetManager - Cleanup Complete. We Are Still Running");
                                 continue;
 
@@ -389,18 +391,14 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                                 //val dataDestLocalAddress = dataDestChannel.socket().localSocketAddress;
                                 //register with select
                                 val destKeys = this.select.registerChannel(dataDestChannel);
-                                println("Done registering");
 
                                 //create mappings for future
                                 this.addressMapper.createDatagramMapping(dataSourceRemoteAddress, dataDestChannel);
-                                println("Created MApping 1");
 
                                 this.addressMapper.createUDPMapping(dataDestChannel,dataSourceChannel);
-                                println("Created Mapping 2");
                                 //this.addressMapper.createDatagramMapping(dataDestLocalAddress, dataSourceChannel);
 
                                 this.listener?.connectionOpened();
-                                println("Attempted to Call Event");
 
                                 //because this is a new UDP channel, its stateless and thus this packet has data to
                                 //be transfered aswell. forward this packet along
@@ -423,7 +421,6 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                                     this.listener?.connectionClosed();
                                 }
 
-                                println(" --- completed writing out data --- ");
                             }
 
                         }else{
@@ -449,29 +446,18 @@ class NetManager(val addressMapper: AddressMapper): Thread(){
                                 dataDestChannel.close();
 
                                 this.listener?.connectionClosed();
+
                             }
-
                         }
-
-
-
 
                     }else{
                         throw IllegalArgumentException("NetManager - No Matching Channel Type For Key's Channel");
                     }
-
-
-
                 }
 
                 keyIterator.remove();
 
             }
-
-
         }
     }
-
-
-
 }
