@@ -74,7 +74,9 @@ class GUI:Application()
 
         // configure the scene (inside the window)
         val borderPane = BorderPane()
-        primaryStage.scene = Scene(borderPane,900.0,480.0)
+        primaryStage.scene = Scene(borderPane,1024.0,480.0)
+        primaryStage.minWidth = 1024.0
+        primaryStage.minHeight = 480.0
         primaryStage.scene.stylesheets.add(CSS.FILE_PATH)
 
         borderPane.center = ScrollPane(forwardingPane)
@@ -85,20 +87,6 @@ class GUI:Application()
 
         // hook stuff up to each other: forwarding pane
         forwardingPane.listener = forwardingPaneListener
-
-        // hook stuff up to each other: user
-        addressPairs.addListener(SetChangeListener()
-        {
-            change ->
-            if (change.wasAdded())
-            {
-                forwardingPane.addressPairs.add(change.elementAdded)
-            }
-            else
-            {
-                forwardingPane.addressPairs.remove(change.elementRemoved)
-            }
-        })
 
         // release count down latch...
         releasedOnApplicationStarted.countDown()
@@ -174,7 +162,7 @@ class GUI:Application()
         fun exit()
     }
 
-    private val forwardingPaneListener = object:ForwardingPane.Listener
+    private val forwardingPaneListener = object:ForwardingPane.IListener
     {
         override fun added(addressPair:AddressPair)
         {

@@ -29,9 +29,9 @@ class ForwardingPane:GridPane()
     private val SEPARATOR_TEXT:String = "->"
 
     private val forwardingEntries:MutableList<ForwardingEntry> = LinkedList()
-    private val forwardingEntryObserver = ForwardingEntryObserver()
+    private val forwardingEntryObserver = ForwardingEntryListener()
 
-    var listener:Listener? = null
+    var listener:IListener? = null
 
     private val _addressPairs = LinkedHashSet<AddressPair>()
     val addressPairs = ObservableSetWrapper(_addressPairs)
@@ -75,14 +75,14 @@ class ForwardingPane:GridPane()
         add(forwardingEntry.dstPortTextField,COL_INDEX_DST_PORT,forwardingEntries.size)
 
         // book keeping
-        forwardingEntry.stateObserver = forwardingEntryObserver
+        forwardingEntry.listener = forwardingEntryObserver
         forwardingEntries.add(forwardingEntry)
     }
 
     private fun remove(forwardingEntry:ForwardingEntry) = synchronized(this)
     {
         // book keeping
-        forwardingEntry.stateObserver = null
+        forwardingEntry.listener = null
         val toRetain = forwardingEntries.minus(forwardingEntry)
 
         // replace all existing forwarding entries
@@ -91,7 +91,7 @@ class ForwardingPane:GridPane()
         toRetain.forEach {add(it)}
     }
 
-    interface Listener
+    interface IListener
     {
         fun added(addressPair:AddressPair)
         fun removed(addressPair:AddressPair)
@@ -122,7 +122,7 @@ class ForwardingPane:GridPane()
         }
     }
 
-    private inner class ForwardingEntryObserver:ForwardingEntry.Observer
+    private inner class ForwardingEntryListener:ForwardingEntry.IListener
     {
         override fun onDataChanged(observee:ForwardingEntry)
         {
@@ -283,7 +283,7 @@ private class ForwardingEntry()
 
     data class ErrorDetails(val localPort:Boolean,val dstSockAddr:Boolean,val protocol:Boolean)
 
-    var stateObserver:ForwardingEntry.Observer? = null
+    var listener:ForwardingEntry.IListener? = null
 
     private var validateInputTask:ValidateInputTask? = null
 
@@ -339,7 +339,7 @@ private class ForwardingEntry()
         }
     }
 
-    interface Observer
+    interface IListener
     {
         fun onDataChanged(observee:ForwardingEntry);
     }
@@ -370,7 +370,7 @@ private class ForwardingEntry()
             // set instance variable sock addresses
             Platform.runLater()
             {
-                stateObserver?.onDataChanged(this@ForwardingEntry)
+                listener?.onDataChanged(this@ForwardingEntry)
             }
         }
     }
