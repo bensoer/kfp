@@ -15,9 +15,9 @@ fun main(args:Array<String>){
 
     var persistance:IPersistanceAdaptor = SQLitePersistanceAdaptor("test-storage.db");
 
-    val ap = AddressPair(localPort = 839021, dest = InetSocketAddress("localhost", 88));
-    val ap2 = AddressPair(localPort = 83921, dest = InetSocketAddress("localhost", 88));
-    val ap3 = AddressPair(localPort = 8021, dest = InetSocketAddress("localhost", 88));
+    val ap = AddressPair(localPort = 839021, dest = InetSocketAddress("localhost", 88), type = "TCP");
+    val ap2 = AddressPair(localPort = 83921, dest = InetSocketAddress("localhost", 88), type = "TCP");
+    val ap3 = AddressPair(localPort = 8021, dest = InetSocketAddress("localhost", 88), type = "TCP");
 
     val data = persistance.loadAll();
 

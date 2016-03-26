@@ -31,6 +31,8 @@ class NetLibrary{
          */
         val MAX_PORT:Int = 0xFFFF
 
+
+        private var UDP_BIND_PORT = 6000;
         /**
          * createClientSocket creates a SocketChannel from the passed in hostNAme and portNumber parameters.
          * After which it then attempts with this channel to connect to the host passed. If the connection
@@ -38,10 +40,12 @@ class NetLibrary{
          */
         fun createClientSocket(hostName:String, portNumber:Int): SocketChannel? {
             Logger.log("NetLibrary - Attemping to connect to $hostName on port $portNumber");
+
+            var channel:SocketChannel? = null;
             try{
 
                 val address = InetSocketAddress(hostName, portNumber);
-                val channel: SocketChannel = SocketChannel.open(address);
+                channel = SocketChannel.open(address);
 
                 while(!channel.finishConnect()){
                     //we wait boys
@@ -50,11 +54,13 @@ class NetLibrary{
                 return channel;
 
             }catch(uhe: UnknownHostException){
+                channel?.close();
                 Logger.log("NetLibrary - Unable To resolve Host Of: $hostName");
                 uhe.printStackTrace();
                 return null;
 
             }catch(ioe: IOException){
+                channel?.close();
                 Logger.log("NetLibrary - Unable To Access IO");
                 ioe.printStackTrace();
                 return null;
@@ -68,25 +74,25 @@ class NetLibrary{
          */
         fun createClientSocket(address:InetSocketAddress): SocketChannel? {
             Logger.log("NetLibrary - Attemping to TCP connect to ${address.hostString} on port ${address.port}");
+            var channel: SocketChannel? = null;
             try{
 
-
-                val channel: SocketChannel = SocketChannel.open(address);
-
-                while(!channel.finishConnect()){
+                channel = SocketChannel.open(address);
+                while(!channel!!.finishConnect()){
                     //we wait boys
                 }
-
                 return channel;
 
             }catch(uhe: UnknownHostException){
+                channel?.close();
                 Logger.log("NetLibrary - Unable To resolve Host Of: ${address.hostName}");
-                uhe.printStackTrace();
+                //uhe.printStackTrace();
                 return null;
 
             }catch(ioe: IOException){
-                Logger.log("NetLibrary - Unable To Access IO");
-                ioe.printStackTrace();
+                channel?.close();
+                Logger.log("NetLibrary - Unable To Access IO: ${address.hostName}, ${address.port}");
+                //ioe.printStackTrace();
                 return null;
             }
         }
@@ -94,8 +100,12 @@ class NetLibrary{
         fun createUDPClientSocket(address:InetSocketAddress): DatagramChannel? {
             Logger.log("NetLibrary - Attempting to UDP connect to ${address.hostString} on port ${address.port}");
 
+            var channel: DatagramChannel? = null;
             try{
-                val channel: DatagramChannel = DatagramChannel.open()
+                channel = DatagramChannel.open();
+                channel.socket().bind(InetSocketAddress(UDP_BIND_PORT));
+                UDP_BIND_PORT--;
+
                 channel.connect(address);
 
                 while(!channel.isConnected){
@@ -104,11 +114,13 @@ class NetLibrary{
 
                 return channel;
             }catch(uhe: UnknownHostException){
+                channel?.close();
                 Logger.log("NetLibrary - Unable To resolve UDP Host Of: ${address.hostName}");
                 uhe.printStackTrace();
                 return null;
 
             }catch(ioe: IOException){
+                channel?.close();
                 Logger.log("NetLibrary - UDP Unable To Access IO");
                 ioe.printStackTrace();
                 return null;
@@ -119,11 +131,12 @@ class NetLibrary{
         fun createUDPServerSocket(portNumber: Int): DatagramChannel?{
             Logger.log("NetLibrary - Attempting to Create A  UDP Server Socket on port $portNumber");
 
+            var channel:DatagramChannel? = null;
             try{
                 //create an address of here
                 val localAddress = InetSocketAddress(portNumber); //should be wildcard bound now ?
                 //create a channel
-                val channel = DatagramChannel.open();
+                channel = DatagramChannel.open();
 
                 //enable reuse of address
                 val socketOption = StandardSocketOptions.SO_REUSEADDR;
@@ -136,6 +149,7 @@ class NetLibrary{
                 return channel;
 
             }catch(ioe: IOException){
+                channel?.close();
                 Logger.log("NetLibrary - UDP Unable To Access IO");
                 ioe.printStackTrace();
                 return null;
@@ -152,12 +166,13 @@ class NetLibrary{
         fun createServerSocket(portNumber: Int): ServerSocketChannel? {
             Logger.log("NetLibrary - Attempting to Create A TCP Server Socket on port $portNumber");
 
+            var channel:ServerSocketChannel? = null;
             try{
 
                 //create an address of here
                 val localAddress = InetSocketAddress(portNumber); //should be wildcard bound now ?
                 //create a channel
-                val channel = ServerSocketChannel.open();
+                channel = ServerSocketChannel.open();
 
                 //enable reuse of address
                 val socketOption = StandardSocketOptions.SO_REUSEADDR;
@@ -170,6 +185,7 @@ class NetLibrary{
                 return channel;
 
             }catch(ioe: IOException){
+                channel?.close();
                 Logger.log("NetLibrary - Unable To Access IO");
                 ioe.printStackTrace();
                 return null;
@@ -198,7 +214,7 @@ class NetLibrary{
             buffer.clear();
             return string;*/
 
-            return SocketRead(buffer, bytesRead);
+            return SocketRead(buffer, bytesRead, channel.getSourceAddress());
         }
 
         /**

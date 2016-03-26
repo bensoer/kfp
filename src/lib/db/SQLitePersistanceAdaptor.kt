@@ -128,7 +128,7 @@ class SQLitePersistanceAdaptor(val DBNAME:String):IPersistanceAdaptor{
                 "VALUES (" +
                         "'" + localPort + "'," +
                         "'" + destination.hostString + "'," +
-                        "'" + destination.port + "'" +
+                        "'" + destination.port + "'," +
                         "'" + type + "'" +
                         ");";
 
