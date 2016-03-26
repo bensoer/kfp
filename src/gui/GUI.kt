@@ -88,20 +88,6 @@ class GUI:Application()
         // hook stuff up to each other: forwarding pane
         forwardingPane.listener = forwardingPaneListener
 
-        // hook stuff up to each other: user
-        addressPairs.addListener(SetChangeListener()
-        {
-            change ->
-            if (change.wasAdded())
-            {
-                forwardingPane.addressPairs.add(change.elementAdded)
-            }
-            else
-            {
-                forwardingPane.addressPairs.remove(change.elementRemoved)
-            }
-        })
-
         // release count down latch...
         releasedOnApplicationStarted.countDown()
     }
