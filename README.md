@@ -20,8 +20,8 @@ To setup 8005-fp-portforwarder do the following:
 
  1. Clone the Project / Download the Project
  2. `cd` into the root project directory
- 3. Call `$ ./gradlew uberjar` (Permissions of the `./gradle` script may need to be modified to be executable)
- 4. Call `# java -jar build/libs/8006-fp-portforwarder.jar`
+ 3. Call `$ ./gradlew jar` (Permissions of the `./gradle` script may need to be modified to be executable)
+ 4. Call `# java -jar build/libs/kfp.jar`
  5. The program should begin initializing
 
 # Usage
