@@ -10,23 +10,18 @@ watch in real-time the amount of traffic passing through the Port Forwarder at a
 
 # Setup
 
-Before you can run the application you will need to make sure you
-have Kotlin installed on your machine. You can download Kotlin from
-[here on github](https://github.com/JetBrains/kotlin/releases/tag/1.0.1-1).
+Before you can run the application you will need to have the latest Java 8
+installed in order for the GUI and live analysis functionality to work, AKA the
+port forwarder does not work without Java 8. You can [download Java 8 here](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html).
 
-You will also need to have the latest Java 8 installed in order for the GUI and
-live analysis functionality to work, AKA the port forwarder does not work without
-Java 8. You can [download Java 8 here](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html).
-
-For the next steps it is assumed that both the commands `kotlinc` and `java` can
-both be called from any location on the terminal
+For the next steps it is assumed that the commands and `java` can both be called from any location on the terminal.
 
 To setup 8005-fp-portforwarder do the following:
 
  1. Clone the Project / Download the Project
- 2. `cd` into the `src` folder
- 3. call `kotlinc main.Application.kt -include-runtime -d PortForwarder.jar`
- 4. call `java -jar PortForwarder.jar`
+ 2. `cd` into the root project directory
+ 3. Call `$ ./gradlew uberjar` (Permissions of the `./gradle` script may need to be modified to be executable)
+ 4. Call `# java -jar build/libs/8006-fp-portforwarder.jar`
  5. The program should begin initializing
 
 # Usage
