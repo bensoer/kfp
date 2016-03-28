@@ -10,19 +10,45 @@ watch in real-time the amount of traffic passing through the Port Forwarder at a
 
 # Setup
 
+## Prerequisites:
 Before you can run the application you will need to have the latest Java 8
-installed in order for the GUI and live analysis functionality to work, AKA the
-port forwarder does not work without Java 8. You can [download Java 8 here](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html).
+installed. You can [download Java 8 here](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html).
 
-For the next steps it is assumed that the commands and `java` can both be called from any location on the terminal.
+## Compile The Project:
+For the next steps it is assumed that the command `java` can be called 
+from any location on the terminal.
 
 To setup 8005-fp-portforwarder do the following:
 
  1. Clone the Project / Download the Project
  2. `cd` into the root project directory
- 3. Call `$ ./gradlew jar` (Permissions of the `./gradle` script may need to be modified to be executable)
- 4. Call `# java -jar build/libs/kfp.jar`
+ 3. Call `./gradlew jar` (Permissions of the `./gradle` script may need to be modified to be executable. 667 should be sufficient)
+ 4. Call `java -jar build/libs/kfp.jar`
  5. The program should begin initializing
+
+## Known Compiling Issues:
+If you get errors in step 3 about the `./gradlew` file not being found. 
+Try executing step 3 with the following command:
+```
+bash ./gradlew jar
+```
+The problem may be because the `gradlew` script's shibang looks for 
+bash in the `/usr/bin/env` folder. On systems such as Fedora 22, bash
+is located in `/usr/bin` and thus this script fails to execute
+
+If you get errors in step 3 looking like this:
+```
+./gradlew: line 2: $'\r': command not found
+./gradlew: line 8: $'\r': command not found
+./gradlew: line 11: $'\r': command not found
+./gradlew: line 14: $'\r': command not found
+./gradlew: line 17: $'\r': command not found
+./gradlew: line 18: syntax error near unexpected token `$'{\r''
+'/gradlew: line 18: `warn ( ) {
+```
+It means the gradlew's file is using an improper line ending characters
+for your operating system. If you are on a unix/linux system you can fix
+this by calling `dos2unix ./gradlew`. This will correct the line endings
 
 # Usage
 
