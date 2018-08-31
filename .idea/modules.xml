@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/8005-fp-portforwarder.iml" filepath="$PROJECT_DIR$/8005-fp-portforwarder.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/kfp.iml" filepath="$PROJECT_DIR$/.idea/modules/kfp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/kfp_main.iml" filepath="$PROJECT_DIR$/.idea/modules/kfp_main.iml" group="kfp" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/kfp_test.iml" filepath="$PROJECT_DIR$/.idea/modules/kfp_test.iml" group="kfp" />
     </modules>
   </component>
 </project>

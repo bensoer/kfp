@@ -68,15 +68,24 @@ private class GUIEventHandler(val netManager: NetManager): GUI.IListener{
 private class NetManagerEventHandler(val gui:GUI):NetManager.IListener{
 
     override fun bytesTransfered(sourceAddress: InetSocketAddress, localPort: Int, bytesTransferred: Int) {
-        this.gui.bytesForwarded(sourceAddress,localPort,bytesTransferred);
+
+            this.gui.bytesForwarded(sourceAddress,localPort,bytesTransferred);
+
+
     }
 
     override fun connectionOpened() {
-        this.gui.connectionOpened();
+
+            this.gui.connectionOpened();
+
+
     }
 
     override fun connectionClosed() {
-        this.gui.connectionClosed();
+
+            this.gui.connectionClosed();
+
+
     }
 
 

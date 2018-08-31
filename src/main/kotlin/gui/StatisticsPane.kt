@@ -1,20 +1,19 @@
 package gui
 
+import gui.stats.BytesForwardedStatsUpdate
+import gui.stats.ConnectionCountStatsUpdate
+import gui.stats.StatsUpdate
 import javafx.application.Platform
 import javafx.geometry.HPos
 import javafx.geometry.Insets
 import javafx.scene.chart.PieChart
-import javafx.scene.control.Button
 import javafx.scene.control.Label
 import javafx.scene.layout.ColumnConstraints
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.Priority
 import java.net.InetSocketAddress
 import java.util.*
-import java.util.concurrent.DelayQueue
-import java.util.concurrent.Delayed
-import java.util.concurrent.TimeUnit
-import kotlin.concurrent.thread
+import java.util.concurrent.*
 
 internal class StatisticsPane:GridPane()
 {
@@ -46,23 +45,29 @@ internal class StatisticsPane:GridPane()
      */
     private val bytesSentLastSecond = DelayQueue<DelayedByteCount>()
 
+    private val bytesToAggregatorQueue = LinkedTransferQueue<StatsUpdate>()
+
     fun bytesForwarded(connection:InetSocketAddress,port:Int,numBytes:Int)
     {
-        synchronized(bytesSentLastSecond)
-        {
-            bytesSentLastSecond.add(DelayedByteCount(connection,port,numBytes,System.currentTimeMillis()+TimeUnit.MILLISECONDS.convert(1,TimeUnit.SECONDS)))
-        }
-        Platform.runLater {bytesForwarded += numBytes}
+        //synchronized(bytesSentLastSecond)
+        //{
+        //    bytesSentLastSecond.add(DelayedByteCount(connection,port,numBytes,System.currentTimeMillis()+TimeUnit.MILLISECONDS.convert(1,TimeUnit.SECONDS)))
+        //}
+        //Platform.runLater {bytesForwarded += numBytes}
+
+        bytesToAggregatorQueue.add(BytesForwardedStatsUpdate(connection, port, numBytes))
     }
 
     fun connectionOpened()
     {
-        Platform.runLater {currentConnections++}
+        bytesToAggregatorQueue.add(ConnectionCountStatsUpdate(1))
+        //Platform.runLater {currentConnections++}
     }
 
     fun connectionClosed()
     {
-        Platform.runLater {currentConnections--}
+        //Platform.runLater {currentConnections--}
+        bytesToAggregatorQueue.add(ConnectionCountStatsUpdate(-1))
     }
 
     private var throughput = 0
@@ -259,8 +264,7 @@ private class DelayedByteCount(
     val connection:InetSocketAddress,
     val port:Int,
     val byteCount:Int,
-    val dequeueTime:Long)
-:Delayed
+    val dequeueTime:Long) :Delayed
 {
     override fun getDelay(unit:TimeUnit):Long
     {

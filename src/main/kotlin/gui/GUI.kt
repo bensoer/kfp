@@ -1,5 +1,9 @@
 package gui
 
+import gui.stats.StatsUpdate
+import gui.stats.BytesForwardedStatsUpdate
+import gui.stats.ConnectionCountStatsUpdate
+
 import javafx.application.Application
 import javafx.application.Platform
 import javafx.collections.ObservableSet
@@ -13,6 +17,7 @@ import tools.AddressPair
 import java.net.InetSocketAddress
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.LinkedTransferQueue
 import kotlin.concurrent.thread
 
 private var _gui:GUI? = null
@@ -28,6 +33,10 @@ class GUI:Application()
 {
     companion object
     {
+
+        private val bytesToAggregatorQueue = LinkedTransferQueue<StatsUpdate>()
+        private val aggregatorThread = AggregatorThread(bytesToAggregatorQueue)
+
         /**
          * main loop of the [GUI]. this function blocks when executed; beware!
          */
@@ -35,6 +44,8 @@ class GUI:Application()
             {
                 Thread.currentThread().name = "guiLooper"
                 Application.launch(GUI::class.java)
+
+                aggregatorThread.stop()
                 gui.executeOnListener({gui.listener?.exit()})
             }
 
@@ -63,6 +74,8 @@ class GUI:Application()
 
     private val statisticsPane:StatisticsPane by lazy {StatisticsPane()}
 
+
+
     /**
      * executed from [Application.launch]. sets up and displays the application
      * window.
@@ -90,13 +103,30 @@ class GUI:Application()
 
         // release count down latch...
         releasedOnApplicationStarted.countDown()
+
+
     }
 
-    fun bytesForwarded(connection:InetSocketAddress,port:Int,numBytes:Int) = statisticsPane.bytesForwarded(connection,port,numBytes)
 
-    fun connectionOpened() = statisticsPane.connectionOpened()
 
-    fun connectionClosed() = statisticsPane.connectionClosed()
+    //do aggregate and thread handling here!
+
+    //fun bytesForwarded(connection:InetSocketAddress,port:Int,numBytes:Int) = statisticsPane.bytesForwarded(connection,port,numBytes)
+    fun bytesForwarded(connection:InetSocketAddress, port:Int, numBytes:Int){
+
+        bytesToAggregatorQueue.add(BytesForwardedStatsUpdate(connection, port, numBytes))
+
+    }
+
+    //fun connectionOpened() = statisticsPane.connectionOpened()
+    fun connectionOpened(){
+        bytesToAggregatorQueue.add(ConnectionCountStatsUpdate(1))
+    }
+
+    //fun connectionClosed() = statisticsPane.connectionClosed()
+    fun connectionClosed(){
+        bytesToAggregatorQueue.add(ConnectionCountStatsUpdate(-1))
+    }
 
     /**
      * elements in this set will be notified upon user interaction with [GUI].
