@@ -1,8 +1,6 @@
 package gui
 
-import gui.stats.BytesForwardedStatsUpdate
-import gui.stats.ConnectionCountStatsUpdate
-import gui.stats.StatsUpdate
+import gui.stats.StatsData
 import javafx.application.Platform
 import javafx.geometry.HPos
 import javafx.geometry.Insets
@@ -43,9 +41,9 @@ internal class StatisticsPane:GridPane()
     /**
      * collection of bytes that were sent in the last 1000 milliseconds.
      */
-    private val bytesSentLastSecond = DelayQueue<DelayedByteCount>()
+    //private val bytesSentLastSecond = DelayQueue<DelayedByteCount>()
 
-    private val bytesToAggregatorQueue = LinkedTransferQueue<StatsUpdate>()
+
 
     fun bytesForwarded(connection:InetSocketAddress,port:Int,numBytes:Int)
     {
@@ -53,21 +51,17 @@ internal class StatisticsPane:GridPane()
         //{
         //    bytesSentLastSecond.add(DelayedByteCount(connection,port,numBytes,System.currentTimeMillis()+TimeUnit.MILLISECONDS.convert(1,TimeUnit.SECONDS)))
         //}
-        //Platform.runLater {bytesForwarded += numBytes}
-
-        bytesToAggregatorQueue.add(BytesForwardedStatsUpdate(connection, port, numBytes))
+        //Platform.runLater {bytesForwarded += numBytes}{
     }
 
     fun connectionOpened()
     {
-        bytesToAggregatorQueue.add(ConnectionCountStatsUpdate(1))
         //Platform.runLater {currentConnections++}
     }
 
     fun connectionClosed()
     {
         //Platform.runLater {currentConnections--}
-        bytesToAggregatorQueue.add(ConnectionCountStatsUpdate(-1))
     }
 
     private var throughput = 0
@@ -217,41 +211,39 @@ internal class StatisticsPane:GridPane()
         nextRow++
     }
 
+
+    private var onStatReset: (() -> Unit)? = null
+    fun setOnStatReset(onStatReset: (() -> Unit)?){
+        this.onStatReset = onStatReset
+    }
+
     private inner class UpdateGuiTask:TimerTask()
     {
         override fun run()
         {
-            Platform.runLater()
-            {
-                synchronized(bytesSentLastSecond)
-                {
-                    // remove expired bytes sent last second
-                    while (bytesSentLastSecond.poll() != null);
+            //Platform.runLater()
+            //{
 
-                    // update throughput
-                    throughput = bytesSentLastSecond.sumBy {it.byteCount}
+                throughput = StatsData.bytesSentLastSecond
+                currentConnections = StatsData.currentConnections
+                bytesForwarded = StatsData.bytesForwarded
 
-                    // update usageByPort
-                    run()
-                    {
-                        val pieData = bytesSentLastSecond
-                            .groupBy {it.port.toString()}
-                            .mapValues {it.value.sumBy {it.byteCount}.toDouble()}
-                            .plus("unused" to (maxThroughput-throughput).toDouble())
-                        updatePieChart(usageByPortDisplay,pieData)
-                    }
 
-                    // update usageByConnection
-                    run()
-                    {
-                        val pieData = bytesSentLastSecond
-                            .groupBy {"${it.connection.hostString}:${it.connection.port}"}
-                            .mapValues {it.value.sumBy {it.byteCount}.toDouble()}
-                            .plus("unused" to (maxThroughput-throughput).toDouble())
-                        updatePieChart(usageByConnectionDisplay,pieData)
-                    }
-                }
-            }
+                val pieData = StatsData.bytesPerPortData
+                updatePieChart(usageByPortDisplay, pieData
+                        .plus("unused" to (maxThroughput-throughput).toDouble())
+                )
+
+                val pieData2 = StatsData.bytesPerConnectionData
+                updatePieChart(usageByConnectionDisplay, pieData2
+                        .plus("unused" to (maxThroughput-throughput).toDouble())
+                )
+
+                //trigger reset now
+                onStatReset?.invoke()
+
+
+            //}
         }
     }
 }

@@ -35,7 +35,7 @@ class GUI:Application()
     {
 
         private val bytesToAggregatorQueue = LinkedTransferQueue<StatsUpdate>()
-        private val aggregatorThread = AggregatorThread(bytesToAggregatorQueue)
+        val aggregatorThread = AggregatorThread(bytesToAggregatorQueue)
 
         /**
          * main loop of the [GUI]. this function blocks when executed; beware!
@@ -43,6 +43,7 @@ class GUI:Application()
         val mainLoop =
             {
                 Thread.currentThread().name = "guiLooper"
+                Thread(aggregatorThread).start()
                 Application.launch(GUI::class.java)
 
                 aggregatorThread.stop()
@@ -93,7 +94,14 @@ class GUI:Application()
         primaryStage.scene.stylesheets.add(CSS.FILE_PATH)
 
         borderPane.center = ScrollPane(forwardingPane)
+
+        statisticsPane.setOnStatReset {
+            GUI.aggregatorThread.resetTime()
+        }
+
         borderPane.bottom = statisticsPane
+
+
 
         // display the window
         primaryStage.show()
@@ -113,9 +121,7 @@ class GUI:Application()
 
     //fun bytesForwarded(connection:InetSocketAddress,port:Int,numBytes:Int) = statisticsPane.bytesForwarded(connection,port,numBytes)
     fun bytesForwarded(connection:InetSocketAddress, port:Int, numBytes:Int){
-
         bytesToAggregatorQueue.add(BytesForwardedStatsUpdate(connection, port, numBytes))
-
     }
 
     //fun connectionOpened() = statisticsPane.connectionOpened()
