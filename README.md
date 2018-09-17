@@ -1,10 +1,10 @@
-# 8005-fp-portforwarder
+# KFP
 
 Created By Eric Tsang and Ben Soer
 
-8005-fp-portforwarder is a Kotlin based Port Forwarding application that allows users to redirect UDP or TCP
+KFP is a Kotlin based Port Forwarding application that allows users to redirect UDP or TCP
 traffic to a designated host on a specific IP. The project runs multi-threaded with a GUI allowing realtime
-responsiveness to changes applied on port forwards. Additionaly the system monitors traffic quanities and
+responsiveness to changes applied on port forwards. Additionally the system monitors traffic quanities and
 the number of connections made through the various ports that are forwarded. Users observing the GUI can
 watch in real-time the amount of traffic passing through the Port Forwarder at any gvien time.
 
@@ -18,7 +18,7 @@ installed. You can [download Java 8 here](http://www.oracle.com/technetwork/java
 For the next steps it is assumed that the command `java` can be called 
 from any location on the terminal.
 
-To setup 8005-fp-portforwarder do the following:
+To setup KFP do the following:
 
  1. Clone the Project / Download the Project
  2. `cd` into the root project directory
